@@ -22,8 +22,10 @@ runs:
       run: |
         script=https://raw.githubusercontent.com/devizer/test-and-build/master/install-build-tools-bundle.sh; 
         set -eu; set -o pipefail
-        try1="wget -q -nv --no-check-certificate -O /tmp/install-build-tools-bundle.sh $script 2>/dev/null || curl -ksSL -o /tmp/install-build-tools-bundle.sh $script"
+        cd /tmp
+        try1="wget -q -nv --no-check-certificate -O install-build-tools-bundle.sh $script 2>/dev/null || curl -ksSL -o install-build-tools-bundle.sh $script"
         eval $try1 || eval $try1 || eval $try1
-        bash /tmp/install-build-tools-bundle.sh >/dev/null
+        bash install-build-tools-bundle.sh >/dev/null
+        rm -f install-build-tools-bundle.sh || true
         Say --Reset-Stopwatch
         Say "CPU: $(Get-CpuName)"
