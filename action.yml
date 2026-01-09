@@ -15,7 +15,7 @@ runs:
         fi
         
         echo "SYSTEM_ARTIFACTSDIRECTORY=$SYSTEM_ARTIFACTSDIRECTORY" >> $GITHUB_ENV
-        echo "SYSTEM_ARTIFACTSDIRECTORY = [$SYSTEM_ARTIFACTSDIRECTORY]"
+        echo "Export SYSTEM_ARTIFACTSDIRECTORY = «$SYSTEM_ARTIFACTSDIRECTORY»"
 
     - name: Setup bush bundle
       shell: bash
@@ -24,6 +24,6 @@ runs:
         set -eu; set -o pipefail
         try1="wget -q -nv --no-check-certificate -O /tmp/install-build-tools-bundle.sh $script 2>/dev/null || curl -ksSL -o /tmp/install-build-tools-bundle.sh $script"
         eval $try1 || eval $try1 || eval $try1
-        bash /tmp/install-build-tools-bundle.sh
+        bash /tmp/install-build-tools-bundle.sh >/dev/null
         Say --Reset-Stopwatch
         Say "CPU: $(Get-CpuName)"
