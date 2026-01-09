@@ -41,7 +41,7 @@ runs:
         if [[ -n "$(command -v pwsh)" ]]; then pwsh Install-SqlServer-Version-Management.ps1 & ; cmd="pwsh"; fi
         rm -f Install-SqlServer-Version-Management.ps1 || true
         wait
-        [[ -n "$cmd" ]] && $cmd -c "(Get-Memory-Info).Description" 2>/dev/null
+        [[ -n "$cmd" ]] && $cmd -c "(Get-Memory-Info).Description" 2>/dev/null && $cmd -c 'Write-Line -TextGreen "$((Get-Memory-Info).Description)"'
 
 
 
