@@ -39,11 +39,11 @@ runs:
         cmd=""
         if [[ -n "$(command -v powershell)" ]]; then 
           cmd="powershell"; 
-          powershell -f Install-SqlServer-Version-Management.ps1 >/dev/null
+          time powershell -f Install-SqlServer-Version-Management.ps1 >/dev/null
         fi
         if [[ -n "$(command -v pwsh)" ]]; then
           cmd="pwsh"; 
-          pwsh Install-SqlServer-Version-Management.ps1 >/dev/null
+          time pwsh Install-SqlServer-Version-Management.ps1 >/dev/null
         fi
         wait
         rm -f Install-SqlServer-Version-Management.ps1 || true
