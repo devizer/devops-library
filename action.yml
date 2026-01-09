@@ -20,12 +20,26 @@ runs:
     - name: Setup bush bundle
       shell: bash
       run: |
-        script=https://raw.githubusercontent.com/devizer/test-and-build/master/install-build-tools-bundle.sh; 
+        script=; 
         set -eu; set -o pipefail
         cd /tmp
-        try1="wget -q -nv --no-check-certificate -O install-build-tools-bundle.sh $script 2>/dev/null || curl -ksSL -o install-build-tools-bundle.sh $script"
-        eval $try1 || eval $try1 || eval $try1
+        Download-File() {
+          local url="$1"
+          local file="$(basename "$url")"
+          try1="wget -q -nv --no-check-certificate -O $file $url 2>/dev/null 1>&2 || curl -kfsSL -o $file $url 2>/dev/null 1>&2"
+          eval $try1 || eval $try1 || eval $try1
+        }
+
+        Download-File "https://raw.githubusercontent.com/devizer/test-and-build/master/install-build-tools-bundle.sh"
         bash install-build-tools-bundle.sh >/dev/null
         rm -f install-build-tools-bundle.sh || true
         Say --Reset-Stopwatch
         Say "CPU: $(Get-CpuName)"
+
+        Download-File "https://devizer.github.io/SqlServer-Version-Management/Install-SqlServer-Version-Management.ps1"
+        if [[ -n "$(command -v pwsh)" ]]; then pwsh Install-SqlServer-Version-Management.ps1; fi
+        if [[ -n "$(command -v powershell)" ]]; then powershell -f Install-SqlServer-Version-Management.ps1; fi
+        rm -f Install-SqlServer-Version-Management.ps1 || true
+
+
+
