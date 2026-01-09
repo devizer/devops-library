@@ -15,7 +15,7 @@ runs:
         fi
         
         echo "SYSTEM_ARTIFACTSDIRECTORY=$SYSTEM_ARTIFACTSDIRECTORY" >> $GITHUB_ENV
-        echo "Export SYSTEM_ARTIFACTSDIRECTORY = «$SYSTEM_ARTIFACTSDIRECTORY»"
+        echo "Export SYSTEM_ARTIFACTSDIRECTORY = \"$SYSTEM_ARTIFACTSDIRECTORY\""
 
     - name: Setup bush bundle
       shell: bash
