@@ -48,7 +48,7 @@ runs:
                            $target = "$docs\$subFolder\Modules";
                            try { [System.IO.Directory]::CreateDirectory($target) | Out-Null } catch {}
                            if ([System.IO.Directory]::Exists($target)) {
-                             echo "EXISTS: [$target]";
+                             # echo "EXISTS: [$target]";
                              .\Install-SqlServer-Version-Management.ps1 -InstallTo "$target"
                            }
                          }
