@@ -37,8 +37,14 @@ runs:
 
         Download-File "https://devizer.github.io/SqlServer-Version-Management/Install-SqlServer-Version-Management.ps1"
         cmd=""
-        if [[ -n "$(command -v powershell)" ]]; then powershell -f Install-SqlServer-Version-Management.ps1 & ; cmd="powershell"; fi
-        if [[ -n "$(command -v pwsh)" ]]; then pwsh Install-SqlServer-Version-Management.ps1 & ; cmd="pwsh"; fi
+        if [[ -n "$(command -v powershell)" ]]; then 
+          powershell -f Install-SqlServer-Version-Management.ps1 &
+          cmd="powershell"; 
+        fi
+        if [[ -n "$(command -v pwsh)" ]]; then
+          pwsh Install-SqlServer-Version-Management.ps1 &
+          cmd="pwsh"; 
+        fi
         rm -f Install-SqlServer-Version-Management.ps1 || true
         wait
         [[ -n "$cmd" ]] && $cmd -c "(Get-Memory-Info).Description" 2>/dev/null && $cmd -c 'Write-Line -TextGreen "$((Get-Memory-Info).Description)"'
