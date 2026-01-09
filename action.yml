@@ -22,31 +22,45 @@ runs:
       run: |
         set -eu; set -o pipefail
         cd /tmp
-        Download-File() {
+        Download-File-Failover() {
           local url="$1"
           local file="$(basename "$url")"
           try1="wget -q -nv --no-check-certificate -O $file $url 2>/dev/null 1>&2 || curl -kfsSL -o $file $url 2>/dev/null 1>&2"
           eval $try1 || eval $try1 || eval $try1
         }
 
-        Download-File "https://raw.githubusercontent.com/devizer/test-and-build/master/install-build-tools-bundle.sh"
+        Download-File-Failover "https://raw.githubusercontent.com/devizer/test-and-build/master/install-build-tools-bundle.sh"
         bash install-build-tools-bundle.sh >/dev/null
         rm -f install-build-tools-bundle.sh || true
         Say --Reset-Stopwatch
         Say "CPU: $(Get-CpuName)"
 
-        Download-File "https://devizer.github.io/SqlServer-Version-Management/Install-SqlServer-Version-Management.ps1"
+        Download-File-Failover "https://devizer.github.io/SqlServer-Version-Management/Install-SqlServer-Version-Management.ps1"
         cmd=""
-        if [[ -n "$(command -v powershell)" ]]; then 
-          cmd="powershell"; 
-          time powershell -f Install-SqlServer-Version-Management.ps1 >/dev/null
+        if [[ -n "$(command -v powershell)" ]]; then cmd="powershell"; runcmd="powershell -f";
+        elif [[ -n "$(command -v pwsh)" ]]; then cmd="pwsh"; runcmd="pwsh"
         fi
-        if [[ -n "$(command -v pwsh)" ]]; then
-          cmd="pwsh"; 
-          time pwsh Install-SqlServer-Version-Management.ps1 >/dev/null
+        if [[ -n "$cmd" ]]; then
+           if [[ "$RUNNER_OS" == 'Windows' ]]; then
+             PS_Script='
+                         $docs = [System.Environment]::GetFolderPath("MyDocuments");
+                         foreach($subFolder in "WindowsPowerShell", "PowerShell") {
+                           $target = "$docs\$subFolder\Modules";
+                           try { [System.IO.Directory]::CreateDirectory($target) | Out-Null } catch {}
+                           if ([System.IO.Directory]::Exists($target)) {
+                             echo "EXISTS: [$target]";
+                             .\Install-SqlServer-Version-Management.ps1 -InstallTo "$target"
+                           }
+                         }
+             '
+
+             echo "$PS_Script" | $cmd -c -
+           else
+             # Linux/MacOS
+             $runcmd Install-SqlServer-Version-Management.ps1
+           fi
         fi
         wait
         rm -f Install-SqlServer-Version-Management.ps1 || true
         [[ -n "$cmd" ]] && $cmd -c 'Write-Line -TextYellow "$((Get-Memory-Info).Description)"'
-
 
