@@ -13,6 +13,7 @@ runs:
         else
           SYSTEM_ARTIFACTSDIRECTORY="${{ runner.temp }}/Artifacts"
         fi
+        mkdir -p "${{ runner.temp }}/Artifacts" 2>/dev/null || true
         
         echo "SYSTEM_ARTIFACTSDIRECTORY=$SYSTEM_ARTIFACTSDIRECTORY" >> $GITHUB_ENV
         echo "Export SYSTEM_ARTIFACTSDIRECTORY = \"$SYSTEM_ARTIFACTSDIRECTORY\""
