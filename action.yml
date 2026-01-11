@@ -41,6 +41,7 @@ runs:
 
         Download-File-Failover "https://devizer.github.io/Install-DevOps-Library.sh"
         bash Install-DevOps-Library.sh
+        time Say-Definition "NET RID is" $(Get-NET-RID)
 
         Download-File-Failover "https://devizer.github.io/SqlServer-Version-Management/Install-SqlServer-Version-Management.ps1"
         cmd=""
