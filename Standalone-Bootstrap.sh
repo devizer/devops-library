@@ -51,5 +51,5 @@
         fi
         wait
         rm -f Install-SqlServer-Version-Management.ps1 || true
-        [[ -n "$cmd" ]] && $cmd -c 'Write-Line -TextYellow "['$cmd'] $((Get-Memory-Info).Description)"'
+        [[ -n "$cmdPowershell" ]] && $cmdPowershell -c 'Write-Line -TextYellow "['$cmd'] $((Get-Memory-Info).Description)"'
 
