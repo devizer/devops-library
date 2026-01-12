@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# script=https://devizer.github.io/devops-library/Standalone-Bootstrap.sh; file=$(basename "$script"); cmd="curl -kfsSL -o /tmp/$file $script"; $cmd || $cmd || $cmd || echo "ERROR"; bash /tmp/$file
         set -eu; set -o pipefail
         cd /tmp
         Download-File-Failover() {
@@ -26,7 +27,7 @@
         cmdPowershell="";
         if [[ -n "$(command -v powershell)" ]]; then cmdPowershell="powershell";
         elif [[ -n "$(command -v pwsh)" ]]; then cmdPowershell="pwsh"; fi
-        if [[ -n "$runPowershell" ]]; then
+        if [[ -n "$cmdPowershell" ]]; then
            _IsWindows=False; [[ "$(uname -s)" == "MSYS"* || "$(uname -s)" == "MINGW"* ]] && _IsWindows=True
            if [[ "${_IsWindows}" == 'True' ]]; then
              # for 5 seconds install into both pwsh and powershell using single process
