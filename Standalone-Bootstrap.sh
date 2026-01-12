@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# script=https://devizer.github.io/devops-library/Standalone-Bootstrap.sh; file=$(basename "$script"); cmd="curl -kfsSL -o /tmp/$file $script"; $cmd || $cmd || $cmd || echo "ERROR"; bash /tmp/$file
+# script=https://devizer.github.io/devops-library/Standalone-Bootstrap.sh; file="${TMPDIR:-/tmp}/$(basename "$script")"; cmd="curl -kfsSL -o $file $script"; $cmd || $cmd || $cmd || echo "ERROR"; bash "$file"
         set -eu; set -o pipefail
         cd /tmp
         Download-File-Failover() {
