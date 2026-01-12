@@ -15,10 +15,12 @@
         Say --Reset-Stopwatch
         Say "CPU: $(Get-CpuName)"
 
-        echo "Installing DevOps-Library.sh ..."
+        printf "Installing DevOps-Library.sh ... "
         Download-File-Failover "https://devizer.github.io/Install-DevOps-Library.sh"
         bash Install-DevOps-Library.sh >/dev/null
+        echo done
         rm -f Install-DevOps-Library.sh || true
+
 
         # time Say-Definition "NET RID is" $(Get-NET-RID)
 
