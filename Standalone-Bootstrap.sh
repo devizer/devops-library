@@ -1,29 +1,4 @@
-name: 'DevOps Library'
-description: 'Sets SYSTEM_ARTIFACTSDIRECTORY cross-platform'
-runs:
-  using: "composite"
-  steps:
-    - name: Export SYSTEM_ARTIFACTSDIRECTORY
-      shell: bash
-      run: |
-        echo "runner.temp = [${{ runner.temp }}]"
-
-        if [ "$RUNNER_OS" == "Windows" ]; then
-          SYSTEM_ARTIFACTSDIRECTORY="${{ runner.temp }}\\Artifacts"
-          PATH_SEPARATOR='\'
-        else
-          SYSTEM_ARTIFACTSDIRECTORY="${{ runner.temp }}/Artifacts"
-          PATH_SEPARATOR='/'
-        fi
-        mkdir -p "${{ runner.temp }}/Artifacts" 2>/dev/null || true
-        
-        echo "PATH_SEPARATOR=$PATH_SEPARATOR" >> $GITHUB_ENV
-        echo "SYSTEM_ARTIFACTSDIRECTORY=$SYSTEM_ARTIFACTSDIRECTORY" >> $GITHUB_ENV
-        echo "Export SYSTEM_ARTIFACTSDIRECTORY = \"$SYSTEM_ARTIFACTSDIRECTORY\", PATH_SEPARATOR = \"$PATH_SEPARATOR\""
-
-    - name: Setup bundle
-      shell: bash
-      run: |
+#!/usr/bin/env bash
         set -eu; set -o pipefail
         cd /tmp
         Download-File-Failover() {
