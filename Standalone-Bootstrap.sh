@@ -16,7 +16,7 @@ saveTo="$(mktemp -d)"; cd "$saveTo"
 Download https://devizer.github.io/Install-DevOps-Library.sh
 Download https://raw.githubusercontent.com/devizer/test-and-build/master/install-build-tools-bundle.sh
 Download https://devizer.github.io/SqlServer-Version-Management/Install-SqlServer-Version-Management.ps1
-docker run -it -v $(pwd -P):/app -w /app alpine sh -c "apk update; apk add bash; bash install-build-tools-bundle.sh; bash Install-DevOps-Library.sh; Wait-For-HTTP https://google-777.com 1; bash"
+docker run -it -v $(pwd -P):/app -w /app alpine sh -c "apk update; apk add bash; bash install-build-tools-bundle.sh; bash Install-DevOps-Library.sh; Wait-For-HTTP https://google-777.com 1; Wait-For-HTTP https://google.com 1; bash"
 
 EOFHELP
 
