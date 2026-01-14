@@ -67,7 +67,7 @@ else
     sz=$((sz/1024))
     totalSize=$((totalSize + sz))
     Say "Delete $dir, $(Format-Thousand "$sz") MB"
-    sudo rm -rf "$dir"/* || true
+    $(Get-Sudo-Command) rm -rf "$dir"/* || true
     fi
   done <<< "$FOLDERS_TO_CLEAN"
 
