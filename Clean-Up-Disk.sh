@@ -57,15 +57,27 @@ else
   totalSize=0
   while IFS= read -r dir; do
     if [[ -n "$dir" ]] && [[ -d "$dir" ]]; then
-      if [[ "$(uname -s)" == Darwin ]]; then
-        sz="$(unset POSIXLY_CORRECT; $(Get-Sudo-Command) du -k -d 0 "$dir" 2>/dev/null | awk '{print $1}' | tail -1 || true)"
+      
+      mode="size-by-du"
+      mode="size-by-df"
+      if [[ "$mode" == "by-du" ]]; then
+           if [[ "$(uname -s)" == Darwin ]]; then
+             sz="$(unset POSIXLY_CORRECT; $(Get-Sudo-Command) du -k -d 0 "$dir" 2>/dev/null | awk '{print $1}' | tail -1 || true)"
+           else
+             sz="$(unset POSIXLY_CORRECT; $(Get-Sudo-Command) du -k --max-depth=0 "$dir" 2>/dev/null | awk '{print $1}' || true)"
+           fi
+           sz=$((sz/1024))
+           Say "Deleting '$dir' ($(Format-Thousand "$sz") MB)"
+           $(Get-Sudo-Command) rm -rf "$dir"/* || true
       else
-        sz="$(unset POSIXLY_CORRECT; $(Get-Sudo-Command) du -k --max-depth=0 "$dir" 2>/dev/null | awk '{print $1}' || true)"
+           freeSizeKbBefore="$(df -Pk "$dir" | awk 'NR==2 {print $4}')"
+           $(Get-Sudo-Command) rm -rf "$dir"/* || true
+           freeSizeKbAfter="$(df -Pk "$dir" | awk 'NR==2 {print $4}')"
+           sz=$((freeSizeKbAfter - freeSizeKbBefore))
+           sz=$((sz/1024))
+           Say "Deleted '$dir' ($(Format-Thousand "$sz") MB)"
       fi
-      sz=$((sz/1024))
       totalSize=$((totalSize + sz))
-      Say "Delete '$dir' ($(Format-Thousand "$sz") MB)"
-      $(Get-Sudo-Command) rm -rf "$dir"/* || true
     fi
   done <<< "$FOLDERS_TO_CLEAN"
 
