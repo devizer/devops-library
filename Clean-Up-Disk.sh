@@ -35,7 +35,7 @@ ____________________________Linux_________________________________
 /usr/share/dotnet
 '
 
-if [[ "$(Is-Microsoft-Hosted-Agent)" == False ]]; then
+if [[ "$(Is-Microsoft-Hosted-Build-Agent)" == False ]]; then
   Say "SKIP Clean UP. Not a microsoft hosted agent"
 else
 
