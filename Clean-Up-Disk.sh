@@ -66,12 +66,12 @@ else
     fi
     sz=$((sz/1024))
     totalSize=$((totalSize + sz))
-    Say "Delete $dir, $(Format-Thousand.sh "$sz") MB"
+    Say "Delete $dir, $(Format-Thousand "$sz") MB"
     sudo rm -rf "$dir"/* || true
     fi
   done <<< "$FOLDERS_TO_CLEAN"
 
-  Say "Tools Cleap up complete. Total freed $(Format-Thousand.sh "$totalSize") MB"
+  Say "Tools Cleap up complete. Total freed $(Format-Thousand "$totalSize") MB"
 
   if [[ "$(command -v docker)" ]]; then
     Say "CLEAN UP Docker Images"
