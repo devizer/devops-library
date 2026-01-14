@@ -57,7 +57,7 @@ else
       
       mode="size-by-du"
       mode="size-by-df"
-      probe_dir="$(mkdtemp -d)"
+      probe_dir="$(mktemp -d)"
       if df -Pk "$probe_dir" >/dev/null 2>&1; then mode="size-by-df"; else mode="size-by-du"; fi
       if [[ "$mode" == "size-by-du" ]]; then
            if [[ "$(uname -s)" == Darwin ]]; then
