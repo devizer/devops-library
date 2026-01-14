@@ -8,7 +8,6 @@ _____________________MAC_OS_________________________________
 
 /System/Volumes/Data/System/Library/AssetsV2/com_apple_MobileAsset_appleTVOSSimulatorRuntime
 /System/Volumes/Data/System/Library/AssetsV2/com_apple_MobileAsset_watchOSSimulatorRuntime
-/System/Volumes/Data/System/Library/AssetsV2/com_apple_MobileAsset_watchOSSimulatorRuntime
 /System/Volumes/Data/System/Library/AssetsV2/com_apple_MobileAsset_iOSSimulatorRuntime
 /System/Volumes/Data/System/Library/AssetsV2/com_apple_MobileAsset_xrOSSimulatorRuntime
 
@@ -16,8 +15,6 @@ _____________________MAC_OS_________________________________
 /Library/AssetsV2/com_apple_MobileAsset_appleTVOSSimulatorRuntime
 /Library/Developer/CoreSimulator/Caches/dyld/24G419/com.apple.CoreSimulator.SimRuntime.watchOS-11-4.22T250
 /System/Library/AssetsV2/com_apple_MobileAsset_appleTVOSSimulatorRuntime
-
-/System/Volumes/Data/Users/runner/.dotnet/sdk
 
 /System/Volumes/Data/Users/runner/.dotnet/shared
 /System/Volumes/Data/Users/runner/.dotnet/packs
