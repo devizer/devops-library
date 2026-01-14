@@ -51,11 +51,11 @@ Is-Microsoft-Hosted-Agent() {
   echo False
 }
 
-Say "Is-Microsoft-Hosted-Agent = [$(Is-Microsoft-Hosted-Agent)]"
 if [[ "$(Is-Microsoft-Hosted-Agent)" == False ]]; then
-  echo "SKIP Clean UP. Not a microsoft hosted agent"
+  Say "SKIP Clean UP. Not a microsoft hosted agent"
 else
 
+  Say "Starting clean up disk on Microsoft Hosted Build Agent"
   totalSize=0
   while IFS= read -r dir; do
     if [[ -n "$dir" ]] && [[ -d "$dir" ]]; then
@@ -66,7 +66,7 @@ else
     fi
     sz=$((sz/1024))
     totalSize=$((totalSize + sz))
-    Say "Delete $dir, $(Format-Thousand "$sz") MB"
+    Say "Delete '$dir' ($(Format-Thousand "$sz") MB)"
     $(Get-Sudo-Command) rm -rf "$dir"/* || true
     fi
   done <<< "$FOLDERS_TO_CLEAN"
