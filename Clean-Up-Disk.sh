@@ -60,7 +60,9 @@ else
       
       mode="size-by-du"
       mode="size-by-df"
-      if [[ "$mode" == "by-du" ]]; then
+      probe_dir="$(mkdtemp -d)"
+      if df -Pk "$probe_dir" >/dev/null 2>&1; then mode="size-by-df"; else mode="size-by-du"; fi
+      if [[ "$mode" == "size-by-du" ]]; then
            if [[ "$(uname -s)" == Darwin ]]; then
              sz="$(unset POSIXLY_CORRECT; $(Get-Sudo-Command) du -k -d 0 "$dir" 2>/dev/null | awk '{print $1}' | tail -1 || true)"
            else
@@ -70,9 +72,9 @@ else
            Say "Deleting '$dir' ($(Format-Thousand "$sz") MB)"
            $(Get-Sudo-Command) rm -rf "$dir"/* || true
       else
-           freeSizeKbBefore="$(time df -Pk "$dir" | awk 'NR==2 {print $4}')"
+           freeSizeKbBefore="$(df -Pk "$dir" | awk 'NR==2 {print $4}')"
            $(Get-Sudo-Command) rm -rf "$dir"/* || true
-           freeSizeKbAfter="$(time df -Pk "$dir" | awk 'NR==2 {print $4}')"
+           freeSizeKbAfter="$(df -Pk "$dir" | awk 'NR==2 {print $4}')"
            sz=$((freeSizeKbAfter - freeSizeKbBefore))
            sz=$((sz/1024))
            Say "Deleted '$dir' ($(Format-Thousand "$sz") MB)"
