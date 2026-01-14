@@ -6,15 +6,16 @@ _____________________MAC_OS_________________________________
 /System/Volumes/Data/Users/runner/Library/Android/sdk
 /Users/runner/Library/Android/sdk/ndk/26.3.11579264
 
+
+# Simulators
 /System/Volumes/Data/System/Library/AssetsV2/com_apple_MobileAsset_appleTVOSSimulatorRuntime
 /System/Volumes/Data/System/Library/AssetsV2/com_apple_MobileAsset_watchOSSimulatorRuntime
 /System/Volumes/Data/System/Library/AssetsV2/com_apple_MobileAsset_iOSSimulatorRuntime
 /System/Volumes/Data/System/Library/AssetsV2/com_apple_MobileAsset_xrOSSimulatorRuntime
-
 /Library/Developer/CoreSimulator/Caches/dyld
 /Library/AssetsV2/com_apple_MobileAsset_appleTVOSSimulatorRuntime
-/Library/Developer/CoreSimulator/Caches/dyld/24G419/com.apple.CoreSimulator.SimRuntime.watchOS-11-4.22T250
 /System/Library/AssetsV2/com_apple_MobileAsset_appleTVOSSimulatorRuntime
+
 
 /System/Volumes/Data/Users/runner/.dotnet/shared
 /System/Volumes/Data/Users/runner/.dotnet/packs
@@ -43,6 +44,8 @@ ____________________________Linux_________________________________
 /usr/local/.ghcup
 /usr/share/dotnet
 '
+
+TOOLS_TO_DELETE="${TOOLS_TO_DELETE:-go codeql swift jvm android ghcup dotnet apple-simulator msvc}"
 
 Say --Reset-Stopwatch
 
@@ -77,6 +80,7 @@ else
            Say "Deleted '$dir' ($(Format-Thousand "$sz") MB)"
       fi
       totalSize=$((totalSize + sz))
+      rm -rf "$probe_dir" 2>/dev/null || true
     fi
   done <<< "$FOLDERS_TO_CLEAN"
 
