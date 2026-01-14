@@ -3,15 +3,25 @@ set -eu; set -o pipefail
 
 FOLDERS_TO_CLEAN='
 _____________________MAC_OS_________________________________
+/System/Volumes/Data/Users/runner/Library/Android/sdk
+/Users/runner/Library/Android/sdk/ndk/26.3.11579264
+
+/System/Volumes/Data/System/Library/AssetsV2/com_apple_MobileAsset_appleTVOSSimulatorRuntime
+/System/Volumes/Data/System/Library/AssetsV2/com_apple_MobileAsset_watchOSSimulatorRuntime
+/System/Volumes/Data/System/Library/AssetsV2/com_apple_MobileAsset_watchOSSimulatorRuntime
+/System/Volumes/Data/System/Library/AssetsV2/com_apple_MobileAsset_iOSSimulatorRuntime
+/System/Volumes/Data/System/Library/AssetsV2/com_apple_MobileAsset_xrOSSimulatorRuntime
+
+/Library/Developer/CoreSimulator/Caches/dyld
 /Library/AssetsV2/com_apple_MobileAsset_appleTVOSSimulatorRuntime
 /Library/Developer/CoreSimulator/Caches/dyld/24G419/com.apple.CoreSimulator.SimRuntime.watchOS-11-4.22T250
 /System/Library/AssetsV2/com_apple_MobileAsset_appleTVOSSimulatorRuntime
 
-/Users/runner/Library/Android/sdk/ndk/26.3.11579264
-
-/System/Volumes/Data/System/Library/AssetsV2/com_apple_MobileAsset_watchOSSimulatorRuntime
 /System/Volumes/Data/Users/runner/.dotnet/sdk
-/System/Volumes/Data/Users/runner/Library/Android/sdk
+
+/System/Volumes/Data/Users/runner/.dotnet/shared
+/System/Volumes/Data/Users/runner/.dotnet/packs
+/System/Volumes/Data/Users/runner/.dotnet/sdk
 
 
 ___________________________WIndows_______________________________
@@ -19,6 +29,8 @@ ___________________________WIndows_______________________________
 C:\ghcup
 C:\Program Files\dotnet
 C:\Program Files (x86)\Android\android-sdk
+C:\hostedtoolcache/windows/CodeQL
+C:\Program Files/Microsoft Visual Studio/2022/Enterprise/VC/Tools
 
 '$HOME/.dotnet/sdk'
 '$HOME/.nuget/packages'
