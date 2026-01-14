@@ -35,22 +35,6 @@ ____________________________Linux_________________________________
 /usr/share/dotnet
 '
 
-Is-Microsoft-Hosted-Agent() {
-  if [[ "${TF_BUILD:-}" == True ]]; then
-    if [[ "$AGENT_NAME" == "Hosted Agent" ]] || [[ "$AGENT_NAME" == "Azure Pipelines" ]] || [[ "$AGENT_NAME" == "Azure Pipelines "* ]] || [[ "$AGENT_NAME" == "ubuntu-latest" ]] || [[ "$AGENT_NAME" == "windows-latest" ]] || [[ "$AGENT_NAME" == "macos-latest" ]]; then
-      echo True
-      return;
-    fi
-  fi
-
-  if [[ "${RUNNER_ENVIRONMENT:-}" == "github-hosted" ]]; then
-      echo True
-      return;
-  fi
-
-  echo False
-}
-
 if [[ "$(Is-Microsoft-Hosted-Agent)" == False ]]; then
   Say "SKIP Clean UP. Not a microsoft hosted agent"
 else
