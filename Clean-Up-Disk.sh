@@ -45,6 +45,7 @@ ____________________________Linux_________________________________
 /usr/share/dotnet
 '
 
+
 TOOLS_TO_DELETE="${TOOLS_TO_DELETE:-go codeql swift jvm android ghcup dotnet apple-simulator msvc}"
 
 Say --Reset-Stopwatch
