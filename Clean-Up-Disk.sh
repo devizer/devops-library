@@ -70,9 +70,9 @@ else
            Say "Deleting '$dir' ($(Format-Thousand "$sz") MB)"
            $(Get-Sudo-Command) rm -rf "$dir"/* || true
       else
-           freeSizeKbBefore="$(df -Pk "$dir" | awk 'NR==2 {print $4}')"
+           freeSizeKbBefore="$(time df -Pk "$dir" | awk 'NR==2 {print $4}')"
            $(Get-Sudo-Command) rm -rf "$dir"/* || true
-           freeSizeKbAfter="$(df -Pk "$dir" | awk 'NR==2 {print $4}')"
+           freeSizeKbAfter="$(time df -Pk "$dir" | awk 'NR==2 {print $4}')"
            sz=$((freeSizeKbAfter - freeSizeKbBefore))
            sz=$((sz/1024))
            Say "Deleted '$dir' ($(Format-Thousand "$sz") MB)"
