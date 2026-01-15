@@ -2,7 +2,8 @@
 set -eu; set -o pipefail
 
 
-DEMAND_TOOLS="${DEMAND_TOOLS:-go codeql swift jvm ghcup android dotnet apple-simulator msvc}"
+# DEMAND_TOOLS="${DEMAND_TOOLS:-go codeql swift jvm ghcup android dotnet apple-simulator msvc}"
+DEMAND_TOOLS="${DEMAND_TOOLS:-none}"
 
 Delete-One() {
     local dir="${1:-}"
@@ -108,6 +109,7 @@ if [[ "$(Is-Microsoft-Hosted-Build-Agent)" == False ]]; then
 else
 
 Say "Starting clean up disk on Microsoft Hosted Build Agent"
+echo "DEMAND_TOOLS: $DEMAND_TOOLS"
 totalSize=0
 
 [[ "$(Is-Tool-Enabled go)" == False ]]      && Delete-Many '/opt/hostedtoolcache/go'
