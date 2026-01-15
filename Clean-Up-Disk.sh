@@ -120,6 +120,7 @@ C:\Program Files (x86)\Android\android-sdk
 /System/Volumes/Data/Users/runner/.dotnet/shared
 /System/Volumes/Data/Users/runner/.dotnet/packs
 /System/Volumes/Data/Users/runner/.dotnet/sdk
+C:\Program Files\dotnet
 /usr/share/dotnet
 '$HOME/.dotnet/sdk'
 '$HOME/.nuget/packages'
