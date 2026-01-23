@@ -48,33 +48,9 @@ runs:
         # time Say-Definition "NET RID is" $(Get-NET-RID)
 
         Download-File-Failover "https://devizer.github.io/SqlServer-Version-Management/Install-SqlServer-Version-Management.ps1"
-        # on github pririty is powershell because of 5 seconds
-        cmdPowershell="";
-        if [[ -n "$(command -v powershell)" ]]; then cmdPowershell="powershell";
-        elif [[ -n "$(command -v pwsh)" ]]; then cmdPowershell="pwsh"; fi
-        if [[ -n "$cmdPowershell" ]]; then
-           _IsWindows=False; [[ "$(uname -s)" == "MSYS"* || "$(uname -s)" == "MINGW"* ]] && _IsWindows=True
-           if [[ "${_IsWindows}" == 'True' ]]; then
-             # for 5 seconds install into both pwsh and powershell using single process
-             PS_Script='
-                         $docs = [System.Environment]::GetFolderPath("MyDocuments");
-                         foreach($subFolder in "WindowsPowerShell", "PowerShell") {
-                           $target = "$docs\$subFolder\Modules";
-                           try { [System.IO.Directory]::CreateDirectory($target) | Out-Null } catch {}
-                           if ([System.IO.Directory]::Exists($target)) {
-                             # echo "EXISTS: [$target]";
-                             .\Install-SqlServer-Version-Management.ps1 -InstallTo "$target"
-                           }
-                         }
-             '
-
-             echo "$PS_Script" | $cmdPowershell -c -
-           else
-             # Linux/MacOS
-             $cmdPowershell -c "./Install-SqlServer-Version-Management.ps1"
-           fi
-        fi
-        wait
+        cmdPowershell=""
+        if [[ -n "$(command -v powershell)" ]]; then powershell -f Install-SqlServer-Version-Management.ps1; cmdPowershell=powershell; fi
+        if [[ -n "$(command -v pwsh)" ]]; then pwsh Install-SqlServer-Version-Management.ps1; cmdPowershell=pwsh; fi
         rm -f Install-SqlServer-Version-Management.ps1 || true
         [[ -n "$cmdPowershell" ]] && $cmdPowershell -c 'Write-Line -TextYellow "['$cmdPowershell'] $((Get-Memory-Info).Description)"'
 
