@@ -50,8 +50,7 @@ EOFHELP
 
         Download-File-Failover "https://devizer.github.io/SqlServer-Version-Management/Install-SqlServer-Version-Management.ps1"
         cmdPowershell=""
-        if [[ -n "$(command -v powershell)" ]]; then powershell -f Install-SqlServer-Version-Management.ps1; cmdPowershell=powershell; fi
         if [[ -n "$(command -v pwsh)" ]]; then pwsh Install-SqlServer-Version-Management.ps1; cmdPowershell=pwsh; fi
+        if [[ -n "$(command -v powershell)" ]]; then powershell -f Install-SqlServer-Version-Management.ps1; cmdPowershell=powershell; fi
         rm -f Install-SqlServer-Version-Management.ps1 || true
         [[ -n "$cmdPowershell" ]] && $cmdPowershell -c 'Write-Line -TextYellow "['$cmdPowershell'] $((Get-Memory-Info).Description)"'
-
