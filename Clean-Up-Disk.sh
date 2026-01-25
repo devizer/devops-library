@@ -2,7 +2,7 @@
 set -eu; set -o pipefail
 
 
-# DEMAND_TOOLS="${DEMAND_TOOLS:-go codeql swift jvm ghcup android dotnet apple-simulator msvc}"
+# DEMAND_TOOLS="${DEMAND_TOOLS:-go codeql swift jvm ghcup android dotnet apple-simulator msvc docker-images}"
 DEMAND_TOOLS="${DEMAND_TOOLS:-none}"
 
 Delete-One() {
