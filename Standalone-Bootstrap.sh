@@ -25,7 +25,7 @@ docker run -it -v "$saveTo":/tmp/bootstrap -w /tmp/bootstrap alpine sh -c "apk u
 EOFHELP
 
         set -eu; set -o pipefail
-        cd /tmp
+        pushd "${TMPDIR:-/tmp}" >/dev/null
         Download-File-Failover() {
           local url="$1"
           local file="$(basename "$url")"
@@ -54,3 +54,5 @@ EOFHELP
         if [[ -n "$(command -v powershell)" ]]; then powershell -f Install-SqlServer-Version-Management.ps1; cmdPowershell=powershell; fi
         rm -f Install-SqlServer-Version-Management.ps1 || true
         [[ -n "$cmdPowershell" ]] && $cmdPowershell -c 'Write-Line -TextYellow "['$cmdPowershell'] $((Get-Memory-Info).Description)"'
+        
+        popd >/dev/null

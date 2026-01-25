@@ -25,7 +25,7 @@ runs:
       shell: bash
       run: |
         set -eu; set -o pipefail
-        cd /tmp
+        pushd "${TMPDIR:-/tmp}" >/dev/null
         Download-File-Failover() {
           local url="$1"
           local file="$(basename "$url")"
@@ -54,3 +54,4 @@ runs:
         rm -f Install-SqlServer-Version-Management.ps1 || true
         [[ -n "$cmdPowershell" ]] && $cmdPowershell -c 'Write-Line -TextYellow "['$cmdPowershell'] $((Get-Memory-Info).Description)"'
 
+        popd >/dev/null
