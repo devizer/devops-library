@@ -40,8 +40,10 @@ EOFHELP
         Download-File-Failover "https://raw.githubusercontent.com/devizer/test-and-build/master/install-build-tools-bundle.sh"
         bash install-build-tools-bundle.sh >/dev/null
         rm -f install-build-tools-bundle.sh || true
-        Say --Reset-Stopwatch
-        Say "CPU: $(Get-CpuName)"
+        if [[ -n "$(command -v Get-CpuName)" ]]; then
+          Say --Reset-Stopwatch
+          Say "CPU: $(Get-CpuName)"
+        fi
 
         printf "Installing DevOps-Library.sh ... "
         Download-File-Failover "https://devizer.github.io/Install-DevOps-Library.sh"
