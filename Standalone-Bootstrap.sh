@@ -25,6 +25,10 @@ docker run -it -v "$saveTo":/tmp/bootstrap -w /tmp/bootstrap alpine sh -c "apk u
 EOFHELP
 
         set -eu; set -o pipefail
+        if [[ -n "${TARGET_DIR:-}" ]]; then
+          sudo="sudo"; if [[ -z "$(command -v sudo)" ]] || [[ "$(uname -s)" == "MSYS"* || "$(uname -s)" == "MINGW"* ]]; then sudo=""; fi
+          mkdir -p "${TARGET_DIR:-}" 2>/dev/null || $sudo mkdir -p "${TARGET_DIR:-}" 2>/dev/null || true
+        fi
         pushd "${TMPDIR:-/tmp}" >/dev/null
         Download-File-Failover() {
           local url="$1"
