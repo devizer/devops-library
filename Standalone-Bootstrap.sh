@@ -26,8 +26,12 @@ EOFHELP
 
         set -eu; set -o pipefail
         if [[ -n "${TARGET_DIR:-}" ]]; then
+          echo "[DevOps Library Setup] Checking explicit TARGET_DIR: '${TARGET_DIR:-}'"
           sudo="sudo"; if [[ -z "$(command -v sudo)" ]] || [[ "$(uname -s)" == "MSYS"* || "$(uname -s)" == "MINGW"* ]]; then sudo=""; fi
           mkdir -p "${TARGET_DIR:-}" 2>/dev/null || $sudo mkdir -p "${TARGET_DIR:-}" 2>/dev/null || true
+          if [[ ! -d "${TARGET_DIR:-}" ]]; then
+            echo "[DevOps Library Setup] Warning! Explicit TARGET_DIR '${TARGET_DIR:-}' cannot be created"
+          fi
         fi
         pushd "${TMPDIR:-/tmp}" >/dev/null
         Download-File-Failover() {
