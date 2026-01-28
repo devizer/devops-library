@@ -25,6 +25,15 @@ runs:
       shell: bash
       run: |
         set -eu; set -o pipefail
+        
+        if [[ "$(uname -s)" == "Darwin" ]]; then
+            echo '#!/bin/bash
+            set -eu;
+            sysctl -n hw.logicalcpu
+            ' | sudo tee /usr/local/bin/nproc >/dev/null
+            sudo chmod +x /usr/local/bin/nproc
+        fi
+
         pushd "${TMPDIR:-/tmp}" >/dev/null
         Download-File-Failover() {
           local url="$1"

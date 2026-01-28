@@ -24,6 +24,14 @@ docker run -it -v "$saveTo":/tmp/bootstrap -w /tmp/bootstrap alpine sh -c "apk u
 
 EOFHELP
 
+        if [[ "$(uname -s)" == "Darwin" ]]; then
+            echo '#!/bin/bash
+            set -eu;
+            sysctl -n hw.logicalcpu
+            ' | sudo tee /usr/local/bin/nproc >/dev/null
+            sudo chmod +x /usr/local/bin/nproc
+        fi
+
         set -eu; set -o pipefail
         if [[ -n "${TARGET_DIR:-}" ]]; then
           echo "[DevOps Library Setup] Checking explicit TARGET_DIR: '${TARGET_DIR:-}'"
