@@ -69,8 +69,8 @@ EOFHELP
 
         printf "Installing DevOps-Library.sh ... "
         Download-File-Failover "https://devizer.github.io/Install-DevOps-Library.sh"
-        bash Install-DevOps-Library.sh >/dev/null
-        echo done
+        bash Install-DevOps-Library.sh # >/dev/null
+        # echo done
         rm -f Install-DevOps-Library.sh || true
 
         unset TARGET_DIR
