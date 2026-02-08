@@ -42,12 +42,19 @@ EOFHELP
           fi
         fi
         pushd "${TMPDIR:-/tmp}" >/dev/null
+
         Download-File-Failover() {
           local url="$1"
           local file="$(basename "$url")"
           try1="wget -q -nv --no-check-certificate -O $file $url 2>/dev/null 1>&2 || curl -kfsSL -o $file $url 2>/dev/null 1>&2"
           eval $try1 || eval $try1 || eval $try1 || { echo "Error downloading $url"; return 1; }
         }
+
+        if [[ -z "${TARGET_DIR:-}" ]]; then
+           if [[ "$(uname -s)" == "MSYS"* || "$(uname -s)" == "MINGW"* ]]; then
+           export TARGET_DIR=/usr/bin
+           echo "[Info] On Windows bash scripts targets to '$TARGET_DIR'"
+        fi
 
         Download-File-Failover "https://raw.githubusercontent.com/devizer/test-and-build/master/install-build-tools-bundle.sh"
         bash install-build-tools-bundle.sh >/dev/null
@@ -62,6 +69,8 @@ EOFHELP
         bash Install-DevOps-Library.sh >/dev/null
         echo done
         rm -f Install-DevOps-Library.sh || true
+
+        unset TARGET_DIR
 
 
         # time Say-Definition "NET RID is" $(Get-NET-RID)
