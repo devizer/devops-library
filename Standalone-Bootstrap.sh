@@ -60,7 +60,7 @@ EOFHELP
         }
 
         Download-File-Failover "https://raw.githubusercontent.com/devizer/test-and-build/master/install-build-tools-bundle.sh"
-        bash install-build-tools-bundle.sh >/dev/null
+        bash install-build-tools-bundle.sh
         rm -f install-build-tools-bundle.sh || true
         if [[ -n "$(command -v Get-CpuName)" ]]; then
           Say --Reset-Stopwatch
