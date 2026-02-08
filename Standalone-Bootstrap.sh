@@ -33,6 +33,14 @@ EOFHELP
         fi
 
         set -eu; set -o pipefail
+
+        if [[ -z "${TARGET_DIR:-}" ]]; then
+           if [[ "$(uname -s)" == "MSYS"* || "$(uname -s)" == "MINGW"* ]]; then
+             export TARGET_DIR=/usr/bin
+             echo "[Info] On Windows bash scripts targets to '$TARGET_DIR' (default)"
+           fi
+        fi
+
         if [[ -n "${TARGET_DIR:-}" ]]; then
           echo "[DevOps Library Setup] Checking explicit TARGET_DIR: '${TARGET_DIR:-}'"
           sudo="sudo"; if [[ -z "$(command -v sudo)" ]] || [[ "$(uname -s)" == "MSYS"* || "$(uname -s)" == "MINGW"* ]]; then sudo=""; fi
@@ -41,6 +49,7 @@ EOFHELP
             echo "[DevOps Library Setup] Warning! Explicit TARGET_DIR '${TARGET_DIR:-}' cannot be created"
           fi
         fi
+        
         pushd "${TMPDIR:-/tmp}" >/dev/null
 
         Download-File-Failover() {
@@ -49,13 +58,6 @@ EOFHELP
           try1="wget -q -nv --no-check-certificate -O $file $url 2>/dev/null 1>&2 || curl -kfsSL -o $file $url 2>/dev/null 1>&2"
           eval $try1 || eval $try1 || eval $try1 || { echo "Error downloading $url"; return 1; }
         }
-
-        if [[ -z "${TARGET_DIR:-}" ]]; then
-           if [[ "$(uname -s)" == "MSYS"* || "$(uname -s)" == "MINGW"* ]]; then
-             export TARGET_DIR=/usr/bin
-             echo "[Info] On Windows bash scripts targets to '$TARGET_DIR' (default)"
-           fi
-        fi
 
         Download-File-Failover "https://raw.githubusercontent.com/devizer/test-and-build/master/install-build-tools-bundle.sh"
         bash install-build-tools-bundle.sh >/dev/null
