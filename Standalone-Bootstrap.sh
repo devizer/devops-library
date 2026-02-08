@@ -52,8 +52,9 @@ EOFHELP
 
         if [[ -z "${TARGET_DIR:-}" ]]; then
            if [[ "$(uname -s)" == "MSYS"* || "$(uname -s)" == "MINGW"* ]]; then
-           export TARGET_DIR=/usr/bin
-           echo "[Info] On Windows bash scripts targets to '$TARGET_DIR'"
+             export TARGET_DIR=/usr/bin
+             echo "[Info] On Windows bash scripts targets to '$TARGET_DIR' (default)"
+           fi
         fi
 
         Download-File-Failover "https://raw.githubusercontent.com/devizer/test-and-build/master/install-build-tools-bundle.sh"
