@@ -24,8 +24,6 @@ runs:
     - name: Setup bundle
       shell: bash
       run: |
-        set -eu; set -o pipefail
-        
         if [[ "$(uname -s)" == "Darwin" ]]; then
             echo '#!/bin/bash
             set -eu;
@@ -34,33 +32,57 @@ runs:
             sudo chmod +x /usr/local/bin/nproc
         fi
 
+        set -eu; set -o pipefail
+
+        if [[ -z "${TARGET_DIR:-}" ]]; then
+           if [[ "$(uname -s)" == "MSYS"* || "$(uname -s)" == "MINGW"* ]]; then
+             export TARGET_DIR=/usr/bin
+             echo "[Info] On Windows bash scripts targets to '$TARGET_DIR' (default)"
+           fi
+        fi
+
+        if [[ -n "${TARGET_DIR:-}" ]]; then
+          echo "[DevOps Library Setup] Checking explicit TARGET_DIR: '${TARGET_DIR:-}'"
+          sudo="sudo"; if [[ -z "$(command -v sudo)" ]] || [[ "$(uname -s)" == "MSYS"* || "$(uname -s)" == "MINGW"* ]]; then sudo=""; fi
+          mkdir -p "${TARGET_DIR:-}" 2>/dev/null || $sudo mkdir -p "${TARGET_DIR:-}" 2>/dev/null || true
+          if [[ ! -d "${TARGET_DIR:-}" ]]; then
+            echo "[DevOps Library Setup] Warning! Explicit TARGET_DIR '${TARGET_DIR:-}' cannot be created"
+          fi
+        fi
+        
         pushd "${TMPDIR:-/tmp}" >/dev/null
+
         Download-File-Failover() {
           local url="$1"
           local file="$(basename "$url")"
           try1="wget -q -nv --no-check-certificate -O $file $url 2>/dev/null 1>&2 || curl -kfsSL -o $file $url 2>/dev/null 1>&2"
-          eval $try1 || eval $try1 || eval $try1
+          eval $try1 || eval $try1 || eval $try1 || { echo "Error downloading $url"; return 1; }
         }
 
         Download-File-Failover "https://raw.githubusercontent.com/devizer/test-and-build/master/install-build-tools-bundle.sh"
-        bash install-build-tools-bundle.sh >/dev/null
+        bash install-build-tools-bundle.sh
         rm -f install-build-tools-bundle.sh || true
-        Say --Reset-Stopwatch
-        Say "CPU: $(Get-CpuName)"
+        if [[ -n "$(command -v Get-CpuName)" ]]; then
+          Say --Reset-Stopwatch
+          Say "CPU: $(Get-CpuName)"
+        fi
 
         printf "Installing DevOps-Library.sh ... "
         Download-File-Failover "https://devizer.github.io/Install-DevOps-Library.sh"
-        bash Install-DevOps-Library.sh >/dev/null
-        echo done
+        bash Install-DevOps-Library.sh # >/dev/null
+        # echo done
         rm -f Install-DevOps-Library.sh || true
+
+        unset TARGET_DIR
+
 
         # time Say-Definition "NET RID is" $(Get-NET-RID)
 
         Download-File-Failover "https://devizer.github.io/SqlServer-Version-Management/Install-SqlServer-Version-Management.ps1"
         cmdPowershell=""
-        if [[ -n "$(command -v powershell)" ]]; then powershell -f Install-SqlServer-Version-Management.ps1; cmdPowershell=powershell; fi
         if [[ -n "$(command -v pwsh)" ]]; then pwsh Install-SqlServer-Version-Management.ps1; cmdPowershell=pwsh; fi
+        if [[ -n "$(command -v powershell)" ]]; then powershell -f Install-SqlServer-Version-Management.ps1; cmdPowershell=powershell; fi
         rm -f Install-SqlServer-Version-Management.ps1 || true
         [[ -n "$cmdPowershell" ]] && $cmdPowershell -c 'Write-Line -TextYellow "['$cmdPowershell'] $((Get-Memory-Info).Description)"'
-
+        
         popd >/dev/null
