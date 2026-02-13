@@ -25,6 +25,7 @@ docker run -it -v "$saveTo":/tmp/bootstrap -w /tmp/bootstrap alpine sh -c "apk u
 EOFHELP
 
         if [[ "$(uname -s)" == "Darwin" ]]; then
+            sudo mkdir -p /usr/local/bin || true
             echo '#!/bin/bash
             set -eu;
             sysctl -n hw.logicalcpu
@@ -117,3 +118,15 @@ EOFHELP
         Version-Fast
 
         popd >/dev/null
+
+        # if Micrssoft Hosted and Second Drive is present then assign SYSTEM_ARTIFACTSDIRECTORY
+        if [[ "$(Is-Microsoft-Hosted-Build-Agent)" == True ]] && [[ "$(Get-OS-Platform)" == Windows ]]; then
+           mkdir -p "D:\System-Artifacts" 2>/dev/null || true;
+           if [[ -d "D:\System-Artifacts" ]]; then
+              SYSTEM_ARTIFACTSDIRECTORY='D:\System-Artifacts'
+              if [[ -n "${GITHUB_ENV:-}" ]]; then
+                  echo "SYSTEM_ARTIFACTSDIRECTORY=$SYSTEM_ARTIFACTSDIRECTORY" >> $GITHUB_ENV
+                  Say "Microsoft Hosted Buid Agent: Assing SYSTEM_ARTIFACTSDIRECTORY to 'SYSTEM_ARTIFACTSDIRECTORY'"
+              fi
+           fi
+        fi
