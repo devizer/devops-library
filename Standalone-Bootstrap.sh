@@ -126,7 +126,7 @@ EOFHELP
               SYSTEM_ARTIFACTSDIRECTORY='D:\System-Artifacts'
               if [[ -n "${GITHUB_ENV:-}" ]]; then
                   echo "SYSTEM_ARTIFACTSDIRECTORY=$SYSTEM_ARTIFACTSDIRECTORY" >> $GITHUB_ENV
-                  Say "Microsoft Hosted Buid Agent: Assing SYSTEM_ARTIFACTSDIRECTORY to 'SYSTEM_ARTIFACTSDIRECTORY'"
+                  Say "Microsoft Hosted Buid Agent: Assing SYSTEM_ARTIFACTSDIRECTORY to '$SYSTEM_ARTIFACTSDIRECTORY'"
               fi
            fi
         fi
