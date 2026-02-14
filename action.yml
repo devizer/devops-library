@@ -10,16 +10,16 @@ runs:
 
         if [ "$RUNNER_OS" == "Windows" ]; then
           SYSTEM_ARTIFACTSDIRECTORY="${{ runner.temp }}\\Artifacts"
-          PATH_SEPARATOR='\'
+          FOLDER_SEPARATOR='\'
         else
           SYSTEM_ARTIFACTSDIRECTORY="${{ runner.temp }}/Artifacts"
-          PATH_SEPARATOR='/'
+          FOLDER_SEPARATOR='/'
         fi
         mkdir -p "${{ runner.temp }}/Artifacts" 2>/dev/null || true
         
-        echo "PATH_SEPARATOR=$PATH_SEPARATOR" >> $GITHUB_ENV
+        echo "FOLDER_SEPARATOR=$FOLDER_SEPARATOR" >> $GITHUB_ENV
         echo "SYSTEM_ARTIFACTSDIRECTORY=$SYSTEM_ARTIFACTSDIRECTORY" >> $GITHUB_ENV
-        echo "Export SYSTEM_ARTIFACTSDIRECTORY = \"$SYSTEM_ARTIFACTSDIRECTORY\", PATH_SEPARATOR = \"$PATH_SEPARATOR\""
+        echo "Export SYSTEM_ARTIFACTSDIRECTORY = \"$SYSTEM_ARTIFACTSDIRECTORY\", FOLDER_SEPARATOR = \"$FOLDER_SEPARATOR\""
 
     - name: Setup bundle
       shell: bash
