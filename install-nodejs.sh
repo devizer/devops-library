@@ -116,13 +116,16 @@ function extract () {
 function add_symlinks() { 
   pattern=$1
   dir=$2
-  if [[ $arch == osx ]]; then $sudo mkdir -p /usr/local/bin; fi
+  if [[ "$rid" == osx* ]]; then $sudo mkdir -p /usr/local/bin; fi
   if [ -d "/usr/local/bin" ]; then target="/usr/local/bin"; else target="/usr/bin"; fi;
   pushd "$dir" >/dev/null
   files=$(eval echo $pattern)
   for f in $files; do
     # echo Creating a link in $target/ to: $PWD/$f
-    if [[ -x $f ]]; then $sudo ln -s -f "$PWD/$f" "$target/$(basename $f)"; header "Created a link in $target/ to:" "$PWD/$f"; fi
+    if [[ -x $f ]]; then 
+      $sudo ln -s -f "$PWD/$f" "$target/$(basename $f)"; 
+      header "Created a link in $target/ to:" "$PWD/$f"; 
+    fi
   done
   popd >/dev/null
 }
