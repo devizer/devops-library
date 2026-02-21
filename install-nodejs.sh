@@ -114,7 +114,7 @@ add_symlinks() {
 
 add_current_folder_to_windows_path() {
   if [[ "$(Get-OS-Platform)" != Windows ]]; then return; fi
-  export win_folder_for_path="$(pwd -W)"
+  export win_folder_for_path="$(pwd -W | sed 's|/|\\|g')"
   echo "Adding folder '$win_folder_for_path' to Current User Windows PATH"
   ps1_script=$(mktemp)
   cat <<'EOFADDPATH' > "$ps1_script.ps1"
