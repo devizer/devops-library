@@ -110,7 +110,7 @@ function extract () {
   fi
   popd >/dev/null
   $sudo rm -f $TMPDIR/node-tmp/$filename
-  add_symlinks $symlinks_pattern $todir
+  # add_symlinks $symlinks_pattern $todir
 }
 
 function add_symlinks() { 
@@ -139,8 +139,8 @@ install_node() {
   extract $link_node "/opt/node" 'skip-symlinks'
 
   # adding support for global packages
-  npm=$(ls -1 /opt/node/node*/bin/npm)
-  nodePath=$(dirname $(ls /opt/node/node*/bin/node))
+  npm=$(ls -1 /opt/node/node*/bin/npm 2>/dev/null || ls -1 /opt/node/node*/npm)
+  nodePath=$(dirname "$npm")
   export PATH="$nodePath:$PATH"
   printf "\n\n"'export PATH="'$nodePath':$PATH"'"\n\n" | tee -a ~/.bashrc >/dev/null
 
