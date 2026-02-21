@@ -169,6 +169,10 @@ install_node() {
      Say "which node"
      where node
   fi
+  if [[ -n "${GITHUB_PATH:-}" ]] && [[ -e "${GITHUB_PATH:-}" ]]; then
+    echo "Adding '$nodePath' to gethub workflow path"
+    echo "$nodePath" >> $GITHUB_PATH
+  fi
 }
 
 
