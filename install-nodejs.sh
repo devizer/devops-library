@@ -166,7 +166,7 @@ install_node() {
                   Write-Host "Folder $folder already in the $($target) path"
                 }
                 else {
-                  $arr += "$folder"
+                  $arr = @("$folder") + $arr
                   $newPath = $arr -join ";"
                   & setx "PATH" "$newPath"
                   Write-Host "New $($target) Path: '$newPath'"
