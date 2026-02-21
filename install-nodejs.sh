@@ -43,28 +43,35 @@ osx_machine="$(sysctl -n hw.machine 2>/dev/null || true)"
 osx_suffix="x64"; [[ "$osx_machine" == *"arm"* ]] && osx_suffix="arm64"
 export link_node_osx='https://nodejs.org/dist/'$NODE_VER'/node-'$NODE_VER'-darwin-'$osx_suffix'.tar.gz'
 
+rid=$(Get-NET-RID)
+if [[ "$rid" == "win-x64" ]]; then
+  url_suffix=win-x64.7z
+elif [[ "$rid" == "win" ]]; then
+  url_suffix=win-x86.7z
+elif [[ "$rid" == "win-arm64" ]]; then
+  url_suffix=win-arm64.7z
+elif [[ "$rid" == "osx-arm64" ]]; then
+  url_suffix=darwin-arm64.tar.xz
+elif [[ "$rid" == "osx-x64" ]]; then
+  url_suffix=darwin-arm64.tar.xz
+elif [[ "$rid" == "linux-x64" ]]; then
+  url_suffix=linux-x64.tar.gz
+elif [[ "$rid" == "linux-arm64" ]]; then
+  url_suffix=linux-arm64.tar.gz
+elif [[ "$rid" == "linux-arm" ]]; then
+  url_suffix=linux-armv7l.tar.gz
+else
+  url_suffix=unknown
+  echo "Warning! Unknown nodejs platform '$rid'" >&2
+fi
 
-
-# RHEL6
-export link_node_rhel6=$link_node_x64
+download_url='https://nodejs.org/dist/'$NODE_VER'/node-'$NODE_VER'-'$url_suffix
 
 
 header() { LightGreen='\033[1;32m';Yellow='\033[1;33m';RED='\033[0;31m'; NC='\033[0m'; printf "${LightGreen}$1${NC} ${Yellow}$2${NC}\n"; }
 
-m=$(uname -m)
-if [[ $m == armv7* ]]; then arch=arm32; elif [[ $m == aarch64* ]] || [[ $m == armv8* ]]; then arch=arm64; elif [[ $m == x86_64 ]]; then arch=x64; fi; if [[ $(uname -s) == Darwin ]]; then arch=osx; fi;
-if [ ! -e /etc/os-release ] && [ -e /etc/redhat-release ]; then
-  redhatRelease=$(</etc/redhat-release)
-  if [[ $redhatRelease == "CentOS release 6."* || $redhatRelease == "Red Hat Enterprise Linux Server release 6."* ]]; then
-    arch=rhel6;
-  fi
-fi
 
-
-header "The current OS architecture" $arch
-# if [ -f check-links.sh ]; then (. check-links.sh); fi; exit
-
-eval link_node='$'link_node_$arch
+header "The current OS node download: '$url_suffix'"
 
 sudo=$(command -v sudo || true)
 
@@ -73,15 +80,15 @@ function extract () {
   todir=$2
   symlinks_pattern=$3
   filename=$(basename $1)
-  $sudo mkdir -p $TMPDIR/dotnet-tmp
+  $sudo mkdir -p $TMPDIR/node-tmp
   
   # DOWNLOADING
   counter=$((counter+1))
   header "[Step $counter] Downloading" $filename
   if [[ "$(command -v curl)" == "" ]]; then
-    $sudo wget --no-check-certificate -O $TMPDIR/dotnet-tmp/$filename $url
+    $sudo wget --no-check-certificate -O $TMPDIR/node-tmp/$filename $url
   else
-    $sudo curl -kfsSL -o $TMPDIR/dotnet-tmp/$filename $url
+    $sudo curl -kfsSL -o $TMPDIR/node-tmp/$filename $url
   fi
   $sudo mkdir -p $todir
   pushd $todir >/dev/null
@@ -89,14 +96,18 @@ function extract () {
   # EXTRACTING
   counter=$((counter+1))
   header "[Step $counter] Extracting" $filename
-  if [[ $filename =~ .tar.gz$ ]]; then tarcmd=xzf; else tarcmd=xJf; fi
-  if [[ ! -z "$(command -v pv)" ]]; then
-    pv $TMPDIR/dotnet-tmp/$filename | $sudo tar $tarcmd -
+  if [[ "$rid" != win* ]]; then
+      if [[ $filename =~ .tar.gz$ ]]; then tarcmd=xzf; else tarcmd=xJf; fi
+      if [[ ! -z "$(command -v pv)" ]]; then
+        pv $TMPDIR/node-tmp/$filename | $sudo tar $tarcmd -
+      else
+        $sudo tar $tarcmd $TMPDIR/node-tmp/$filename
+      fi
   else
-    $sudo tar $tarcmd $TMPDIR/dotnet-tmp/$filename
+    7z -y x $TMPDIR/node-tmp/$filename
   fi
   popd >/dev/null
-  $sudo rm -f $TMPDIR/dotnet-tmp/$filename
+  $sudo rm -f $TMPDIR/node-tmp/$filename
   add_symlinks $symlinks_pattern $todir
 }
 
