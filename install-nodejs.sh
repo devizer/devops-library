@@ -53,7 +53,7 @@ elif [[ "$rid" == "win-arm64" ]]; then
 elif [[ "$rid" == "osx-arm64" ]]; then
   url_suffix=darwin-arm64.tar.xz
 elif [[ "$rid" == "osx-x64" ]]; then
-  url_suffix=darwin-arm64.tar.xz
+  url_suffix=darwin-x64.tar.xz
 elif [[ "$rid" == "linux-x64" ]]; then
   url_suffix=linux-x64.tar.gz
 elif [[ "$rid" == "linux-arm64" ]]; then
