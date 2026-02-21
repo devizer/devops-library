@@ -161,7 +161,7 @@ install_node() {
   $sudo bash -c "PATH=\"$NEW_PATH\"; npm install yarn $other_packages --global"
   $sudo rm -rf ~/.npm
   if [[ "$(Get-OS-Platform)" != Windows ]]; then
-     add_symlinks 'node*/bin/*' /opt/node
+     add_symlinks /opt/node 'node*/bin/*' 
   else
      cd /opt/node/node*
      add_current_folder_to_windows_path
