@@ -31,7 +31,6 @@ while [ $# -gt 0 ]; do
       UPDATE_REPO="True"
       shift 1
       ;;
-
     --target-folder)
       if [ -z "${2:-}" ]; then
         echo "Error: --target-folder requires a non-empty argument" >&2
@@ -58,7 +57,7 @@ Run-Remote-Bash-Script() {
    $sudo bash "$file"
 }
 
-Run-Remote-Bootstrapper() { Run-Remote-Bash-Script "https://devizer.github.io/devops-library/Standalone-Bootstrap.sh" }
+Run-Remote-Bootstrapper() { Run-Remote-Bash-Script "https://devizer.github.io/devops-library/Standalone-Bootstrap.sh"; }
 Run-Remote-Bootstrapper-if-Required() {
   [[ -z "$(command -v try-and-retry)" || -z "$(command -v Run-Remote-Script)" || -z "$(command -v Get-NET-RID)" ]] && Run-Remote-Bootstrapper
 }
@@ -67,6 +66,7 @@ function smart_sudo() {
   eval "$(Get-Sudo-Command) $@"
 }
 
+Run-Remote-Bootstrapper-if-Required
 
 
 # DEFAULTS
@@ -93,7 +93,6 @@ if [[ -f /etc/os-release ]]; then
 fi 
 
 
-test -n "$ARCH" && echo "I'm [$(whoami)]. Net Core Should be installed as ROOT. Arch is $ARCH"
 
 rid="$(Get-NET-RID)"
 if [[ "$rid" == "osx-i386" || "$rid" == "linux-i386" ]]; then
