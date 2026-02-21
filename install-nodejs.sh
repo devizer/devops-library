@@ -60,9 +60,7 @@ fi
 header "The current OS architecture" $arch
 # if [ -f check-links.sh ]; then (. check-links.sh); fi; exit
 
-eval links='$'links_$arch
 eval link_node='$'link_node_$arch
-eval link_pwsh='$'link_pwsh_$arch
 
 sudo=$(command -v sudo || true)
 
