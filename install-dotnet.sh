@@ -131,6 +131,9 @@ if [ -s '"'"${DOTNET_TARGET_DIR}"'"'/dotnet ]; then
 
     DOTNET_CLI_TELEMETRY_OPTOUT=1
     export DOTNET_CLI_TELEMETRY_OPTOUT
+
+    DOTNET_CLI_UI_LANGUAGE=en-US
+    export DOTNET_CLI_UI_LANGUAGE
 fi
 ' | smart_sudo tee /etc/profile.d/dotnet-core.sh >/dev/null
 smart_sudo chmod +x /etc/profile.d/dotnet-core.sh
