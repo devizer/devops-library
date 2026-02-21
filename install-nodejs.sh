@@ -68,7 +68,7 @@ fi
 download_url='https://nodejs.org/dist/'$NODE_VER'/node-'$NODE_VER'-'$url_suffix
 
 
-header() { LightGreen='\033[1;32m';Yellow='\033[1;33m';RED='\033[0;31m'; NC='\033[0m'; printf "${LightGreen}$1${NC} ${Yellow}$2${NC}\n"; }
+header() { LightGreen='\033[1;32m';Yellow='\033[1;33m';RED='\033[0;31m'; NC='\033[0m'; printf "${LightGreen}$1${NC} ${Yellow}${2:-}${NC}\n"; }
 
 
 header "The current OS node download: '$url_suffix'"
