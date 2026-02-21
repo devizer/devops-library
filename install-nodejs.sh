@@ -143,7 +143,7 @@ install_node() {
   local url="$link_node"
   echo "Download url: '$link_node'"
   filename=$(basename "$url")
-  local tmp_file="$(MkTemp-File-Smarty "$filename" "node.binaries")"
+  local tmp_file="$(MkTemp-Folder-Smarty "node.binaries")/$filename"
   echo "Download file: '$tmp_file'"
 
   Download-File "$url" "$tmp_file"
