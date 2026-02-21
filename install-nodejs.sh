@@ -7,6 +7,9 @@ NODE_VER=${NODE_VER:-v16.20.2}
 NODE_VER_JESSIE=${NODE_VER_JESSIE:-v10.21.0}
 SKIP_NPM_UPGRADE="${SKIP_NPM_UPGRADE:True}"
 
+if [[ -n "${1:-}" ]]; then
+  NODE_VER="${1:-}"
+fi
 
 set -ue
 
