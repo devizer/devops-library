@@ -170,8 +170,12 @@ install_node() {
      where node
   fi
   if [[ -n "${GITHUB_PATH:-}" ]] && [[ -e "${GITHUB_PATH:-}" ]]; then
-    echo "Adding '$nodePath' to gethub workflow path"
+    echo "Adding '$nodePath' to github workflow path"
     echo "$nodePath" >> $GITHUB_PATH
+  fi
+  if [[ -n ""${TF_BUILD:-}"" ]]; then
+    echo "Adding '$nodePath' to azure pipelines path"
+    echo "##vso[task.prependpath]$nodePath"
   fi
 }
 
