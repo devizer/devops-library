@@ -175,6 +175,8 @@ EOFADDPATH
      powershell -ExecutionPolicy Bypass -f "$ps1_script.ps1"
      rm -f "$ps1_script"*
      echo "PATH: $PATH"
+     Say "which node"
+     which node
   fi
 }
 
