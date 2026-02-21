@@ -133,7 +133,7 @@ function add_symlinks() {
 counter=0;total=4;
 
 # node, npm and yarn
-function install_node() {
+install_node() {
   $sudo rm -rf /opt/node >/dev/null 2>&1
   echo node url: $link_node
   extract $link_node "/opt/node" 'skip-symlinks'
@@ -149,7 +149,31 @@ function install_node() {
   other_packages=""
   sudo bash -c "PATH=\"$nodePath:$PATH\"; npm install yarn $other_packages --global"
   sudo rm -rf ~/.npm
-  add_symlinks 'node*/bin/*' /opt/node
+  if [[ "$(Get-OS-Platform)" != Windows ]]; then
+     add_symlinks 'node*/bin/*' /opt/node
+  else
+     cd /opt/node/node*
+     export win_folder_for_path="$(pwd -W)"
+     ps1_script=$(mktemp)
+     cat <<'EOFADDPATH' > "$ps1_script"
+                $folder = $ENV:win_folder_for_path
+                $target = "User"
+                $thePath = [Environment]::GetEnvironmentVariable("PATH", "$target");
+                $arr = $thePath.Split(";")
+                $has = $null -ne ($arr | ? { $_ -eq $folder })
+                if ($has) {
+                  Write-Host "Folder $folder already in the $($target) path"
+                }
+                else {
+                  $arr += "$folder"
+                  $newPath = $arr -join ";"
+                  & setx "PATH" "$newPath"
+                  Write-Host "New $($target) Path: '$newPath'"
+                }
+EOFADDPATH
+     powershell -ExecutionPolicy Bypass -f "$ps1_script"
+     rm -f "$ps1_script"
+  fi
 }
 
 
