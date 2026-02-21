@@ -76,6 +76,7 @@ header "The current OS node download: '$url_suffix'"
 echo "Download url: '$link_node'"
 
 sudo=$(command -v sudo || true)
+sudo=$(Get-Sudo-Command)
 
 function extract () {
   url=$1
@@ -147,8 +148,8 @@ install_node() {
   echo "Upgrading and installing: yarn"
   other_packages="npm-check-updates"; if [[ -n "${SKIP_NPM_UPGRADE:-}" ]]; then other_packages=""; fi
   other_packages=""
-  sudo bash -c "PATH=\"$nodePath:$PATH\"; npm install yarn $other_packages --global"
-  sudo rm -rf ~/.npm
+  $sudo bash -c "PATH=\"$nodePath:$PATH\"; npm install yarn $other_packages --global"
+  $sudo rm -rf ~/.npm
   if [[ "$(Get-OS-Platform)" != Windows ]]; then
      add_symlinks 'node*/bin/*' /opt/node
   else
