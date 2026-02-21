@@ -70,7 +70,6 @@ header() { LightGreen='\033[1;32m';Yellow='\033[1;33m';RED='\033[0;31m'; NC='\03
 
 
 header "The current OS node download: '$url_suffix'"
-echo "Download url: '$link_node'"
 
 sudo=$(command -v sudo || true)
 sudo=$(Get-Sudo-Command)
@@ -142,11 +141,13 @@ EOFADDPATH
 install_node() {
   $sudo rm -rf /opt/node >/dev/null 2>&1
   local url="$link_node"
-  echo node url: $url
+  echo "Download url: '$link_node'"
   filename=$(basename "$url")
   local tmp_file="$(MkTemp-File-Smarty "$filename" "node.binaries")"
+  echo "Download file: '$tmp_file'"
+
   Download-File "$url" "$tmp_file"
-  Extract-Archive "$tmp_file" "$todir"
+  Extract-Archive "$tmp_file" "/opt/node"
 
   # adding support for global packages
   npm=$(ls -1 /opt/node/node*/bin/npm 2>/dev/null || ls -1 /opt/node/node*/npm)
