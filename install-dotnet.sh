@@ -104,17 +104,17 @@ Say "Configuring shared environment for .NET Core. Install Dir: ${DOTNET_TARGET_
 
 if [[ "$(uname -r)" == 2* ]]; then
     # centos/redhat 6 
-    var_HTTP_SOCKET="DOTNET_SYSTEM_NET_HTTP_USESOCKETSHTTPHANDLER=0"
     export DOTNET_SYSTEM_NET_HTTP_USESOCKETSHTTPHANDLER=0 
 else
     export DOTNET_SYSTEM_NET_HTTP_USESOCKETSHTTPHANDLER=1
 fi
+var_HTTP_SOCKET="DOTNET_SYSTEM_NET_HTTP_USESOCKETSHTTPHANDLER=$DOTNET_SYSTEM_NET_HTTP_USESOCKETSHTTPHANDLER"
 
 echo '#!/usr/bin/env bash
-if [ -s "'"'"${DOTNET_TARGET_DIR}"'"'/dotnet" ]; then 
+if [ -s '"'"${DOTNET_TARGET_DIR}"'"'/dotnet ]; then
     DOTNET_ROOT='"'"${DOTNET_TARGET_DIR}"'"'
     export DOTNET_ROOT 
-    PATH="'"'"${DOTNET_TARGET_DIR}"'"':$PATH"
+    PATH="'$DOTNET_ROOT':$PATH"
     if [ -d "$HOME/.dotnet/tools" ]; then
         PATH="$PATH:$HOME/.dotnet/tools"
     fi
