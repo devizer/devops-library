@@ -156,7 +156,7 @@ install_node() {
      cd /opt/node/node*
      export win_folder_for_path="$(pwd -W)"
      ps1_script=$(mktemp)
-     cat <<'EOFADDPATH' > "$ps1_script"
+     cat <<'EOFADDPATH' > "$ps1_script.ps1"
                 $folder = $ENV:win_folder_for_path
                 $target = "User"
                 $thePath = [Environment]::GetEnvironmentVariable("PATH", "$target");
@@ -172,8 +172,8 @@ install_node() {
                   Write-Host "New $($target) Path: '$newPath'"
                 }
 EOFADDPATH
-     powershell -ExecutionPolicy Bypass -f "$ps1_script"
-     rm -f "$ps1_script"
+     powershell -ExecutionPolicy Bypass -f "$ps1_script.ps1"
+     rm -f "$ps1_script"*
   fi
 }
 
