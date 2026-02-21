@@ -2,7 +2,6 @@
 # Here is one line installer : export NODE_VER=v16.20.2
 # script=https://raw.githubusercontent.com/devizer/glist/master/install-dotnet-and-nodejs.sh; (wget -q -nv --no-check-certificate -O - $script 2>/dev/null || curl -ksSL $script) | bash -s dotnet node pwsh
 
-# NODE_VER=${NODE_VER:-v14.19.1}
 NODE_VER=${NODE_VER:-v16.20.2}
 NODE_VER_JESSIE=${NODE_VER_JESSIE:-v10.21.0}
 SKIP_NPM_UPGRADE="${SKIP_NPM_UPGRADE:True}"
@@ -67,8 +66,6 @@ fi
 
 link_node='https://nodejs.org/dist/'$NODE_VER'/node-'$NODE_VER'-'$url_suffix
 
-
-
 header() { LightGreen='\033[1;32m';Yellow='\033[1;33m';RED='\033[0;31m'; NC='\033[0m'; printf "${LightGreen}$1${NC} ${Yellow}${2:-}${NC}\n"; }
 
 
@@ -81,20 +78,6 @@ sudo=$(Get-Sudo-Command)
 function extract () {
   url=$1
   todir=$2
-  symlinks_pattern=$3
-  filename=$(basename $1)
-  $sudo mkdir -p $TMPDIR/node-tmp
-  
-  # DOWNLOADING
-  counter=$((counter+1))
-  header "[Step $counter] Downloading" $filename
-  if [[ "$(command -v curl)" == "" ]]; then
-    $sudo wget --no-check-certificate -O $TMPDIR/node-tmp/$filename $url
-  else
-    $sudo curl -kfsSL -o $TMPDIR/node-tmp/$filename $url
-  fi
-  $sudo mkdir -p $todir
-  pushd $todir >/dev/null
   
   # EXTRACTING
   counter=$((counter+1))
@@ -111,16 +94,15 @@ function extract () {
   fi
   popd >/dev/null
   $sudo rm -f $TMPDIR/node-tmp/$filename
-  # add_symlinks $symlinks_pattern $todir
 }
 
-function add_symlinks() { 
-  pattern=$1
-  dir=$2
+add_symlinks() { 
+  local dir="$1"
+  local pattern="$2"
   if [[ "$rid" == osx* ]]; then $sudo mkdir -p /usr/local/bin; fi
   if [ -d "/usr/local/bin" ]; then target="/usr/local/bin"; else target="/usr/bin"; fi;
   pushd "$dir" >/dev/null
-  files=$(eval echo $pattern)
+  local files=$(eval echo $pattern)
   for f in $files; do
     # echo Creating a link in $target/ to: $PWD/$f
     if [[ -x $f ]]; then 
@@ -131,32 +113,12 @@ function add_symlinks() {
   popd >/dev/null
 }
 
-counter=0;total=4;
-
-# node, npm and yarn
-install_node() {
-  $sudo rm -rf /opt/node >/dev/null 2>&1
-  echo node url: $link_node
-  extract $link_node "/opt/node" 'skip-symlinks'
-
-  # adding support for global packages
-  npm=$(ls -1 /opt/node/node*/bin/npm 2>/dev/null || ls -1 /opt/node/node*/npm)
-  nodePath=$(dirname "$npm")
-  export PATH="$nodePath:$PATH"
-  printf "\n\n"'export PATH="'$nodePath':$PATH"'"\n\n" | tee -a ~/.bashrc >/dev/null
-
-  echo "Upgrading and installing: yarn"
-  other_packages="npm-check-updates"; if [[ -n "${SKIP_NPM_UPGRADE:-}" ]]; then other_packages=""; fi
-  other_packages=""
-  $sudo bash -c "PATH=\"$nodePath:$PATH\"; npm install yarn $other_packages --global"
-  $sudo rm -rf ~/.npm
-  if [[ "$(Get-OS-Platform)" != Windows ]]; then
-     add_symlinks 'node*/bin/*' /opt/node
-  else
-     cd /opt/node/node*
-     export win_folder_for_path="$(pwd -W)"
-     ps1_script=$(mktemp)
-     cat <<'EOFADDPATH' > "$ps1_script.ps1"
+add_current_folder_to_windows_path() {
+  if [[ "$(Get-OS-Platform)" != Windows ]]; then return; fi
+  export win_folder_for_path="$(pwd -W)"
+  echo "Adding folder '$win_folder_for_path' to Current User Windows PATH"
+  ps1_script=$(mktemp)
+  cat <<'EOFADDPATH' > "$ps1_script.ps1"
                 $folder = $ENV:win_folder_for_path
                 $target = "User"
                 $thePath = [Environment]::GetEnvironmentVariable("PATH", "$target");
@@ -172,11 +134,39 @@ install_node() {
                   Write-Host "New $($target) Path: '$newPath'"
                 }
 EOFADDPATH
-     powershell -ExecutionPolicy Bypass -f "$ps1_script.ps1"
-     rm -f "$ps1_script"*
+  powershell -ExecutionPolicy Bypass -f "$ps1_script.ps1"
+  rm -f "$ps1_script"*
+}
+
+# node, npm and yarn
+install_node() {
+  $sudo rm -rf /opt/node >/dev/null 2>&1
+  local url="$link_node"
+  echo node url: $url
+  filename=$(basename "$url")
+  local tmp_file="$(MkTemp-File-Smarty "$filename" "node.binaries")"
+  Download-File "$url" "$tmp_file"
+  Extract-Archive "$tmp_file" "$todir"
+
+  # adding support for global packages
+  npm=$(ls -1 /opt/node/node*/bin/npm 2>/dev/null || ls -1 /opt/node/node*/npm)
+  nodePath=$(dirname "$npm")
+  NEW_PATH="$nodePath:$PATH"
+  export PATH="$NEW_PATH"
+  printf "\n\n"'export PATH="'$nodePath':$PATH"'"\n\n" | tee -a ~/.bashrc >/dev/null
+
+  echo "Upgrading and installing: yarn"
+  other_packages=""
+  $sudo bash -c "PATH=\"$NEW_PATH\"; npm install yarn $other_packages --global"
+  $sudo rm -rf ~/.npm
+  if [[ "$(Get-OS-Platform)" != Windows ]]; then
+     add_symlinks 'node*/bin/*' /opt/node
+  else
+     cd /opt/node/node*
+     add_current_folder_to_windows_path
      echo "PATH: $PATH"
      Say "which node"
-     which node
+     where node
   fi
 }
 
