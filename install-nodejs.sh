@@ -128,8 +128,9 @@ function install_node() {
   export PATH="$nodePath:$PATH"
   printf "\n\n"'export PATH="'$nodePath':$PATH"'"\n\n" | tee -a ~/.bashrc >/dev/null
 
-  header "Upgrading and installing" 'npm & yarn (latest)'
+  echo "Upgrading and installing: yarn"
   other_packages="npm-check-updates"; if [[ -n "${SKIP_NPM_UPGRADE:-}" ]]; then other_packages=""; fi
+  other_packages=""
   sudo bash -c "PATH=\"$nodePath:$PATH\"; npm install yarn $other_packages --global"
   sudo rm -rf ~/.npm
   add_symlinks 'node*/bin/*' /opt/node
