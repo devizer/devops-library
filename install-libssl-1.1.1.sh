@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Here is one line installer 
-# url=https://raw.githubusercontent.com/devizer/glist/master/install-libssl-1.1.sh; (wget -q -nv --no-check-certificate -O - $url 2>/dev/null || curl -ksSL $url) | bash
+# url=https://devizer.github.io/devops-library/install-libssl-1.1.1.sh; (wget -q -nv --no-check-certificate -O - $url 2>/dev/null || curl -ksSL $url) | bash
+# Run-Remote-Script https://devizer.github.io/devops-library/install-libssl-1.1.1.sh --target-folder /opt/libssl-1.1.1 --register --first
 set -e
 set -u
 set -o pipefail
