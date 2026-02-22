@@ -150,7 +150,7 @@ fi
 
 mkdir -p ~/.dotnet/tools
 Say "Configured shared environment for .NET Core"
-. /etc/profile.d/dotnet-core.sh
+. /etc/profile.d/dotnet.sh
 
 
       export DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1
