@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Here is one line installer : export NODE_VER=v16.20.2
-# script=https://raw.githubusercontent.com/devizer/glist/master/install-dotnet-and-nodejs.sh; (wget -q -nv --no-check-certificate -O - $script 2>/dev/null || curl -ksSL $script) | bash -s dotnet node pwsh
+# script=https://devizer.github.io/devops-library/install-nodejs.sh; (wget -q -nv --no-check-certificate -O - $script 2>/dev/null || curl -ksSL $script) | bash -s dotnet node pwsh
 
 NODE_VER=${NODE_VER:-v16.20.2}
 NODE_VER_JESSIE=${NODE_VER_JESSIE:-v10.21.0}

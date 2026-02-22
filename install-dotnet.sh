@@ -5,12 +5,12 @@
 # export DOTNET_VERSIONS="3.1 5.0 6.0 7.0 8.0 9.0"
 # export DOTNET_VERSIONS="3.1:aspnetcore 6.0:aspnetcore 8.0:aspnetcore 10.0"
 # kind: default|sdk, aspnetcore, dotnet, windowsdesktop
-# script=https://raw.githubusercontent.com/devizer/test-and-build/master/lab/install-DOTNET.sh; (wget -q -nv --no-check-certificate -O - $script 2>/dev/null || curl -ksSL $script) | bash; test -s /usr/share/dotnet/dotnet && sudo ln -f -s /usr/share/dotnet/dotnet /usr/local/bin/dotnet; test -s /usr/local/share/dotnet/dotnet && sudo ln -f -s /usr/local/share/dotnet/dotnet /usr/local/bin/dotnet; 
+# script=https://devizer.github.io/devops-library/install-dotnet.sh; (wget -q -nv --no-check-certificate -O - $script 2>/dev/null || curl -ksSL $script) | bash; test -s /usr/share/dotnet/dotnet && sudo ln -f -s /usr/share/dotnet/dotnet /usr/local/bin/dotnet; test -s /usr/local/share/dotnet/dotnet && sudo ln -f -s /usr/local/share/dotnet/dotnet /usr/local/bin/dotnet; 
 
 # 2026
 # export DOTNET_VERSIONS="3.1:aspnetcore 6.0:aspnetcore 8.0:aspnetcore 3.1:windowsdesktop 6.0:windowsdesktop 8.0:windowsdesktop 10.0"
 
-# Run-Remote-Script https://devizer.github.io/devops-library/install-dotnet.sh 6.0:aspnetcore 8.0:aspnetcore 9.0 10.0 --skip-linking --target-folder "/usr/share/dotnet" --skip-dependencies --update-repo
+# Run-Remote-Script https://devizer.github.io/devops-library/install-dotnet.sh 6.0:aspnetcore 8.0:aspnetcore 9.0 10.0 --skip-linking --target-folder "/usr/share/dotnet" --skip-dependencies|--update-repo
 
 SKIP_LINKING="False"
 SKIP_DEPENDENCIES="False"
@@ -135,16 +135,15 @@ if [ -s '"'"${DOTNET_TARGET_DIR}"'"'/dotnet ]; then
     DOTNET_CLI_UI_LANGUAGE=en-US
     export DOTNET_CLI_UI_LANGUAGE
 fi
-' | smart_sudo tee /etc/profile.d/dotnet-core.sh >/dev/null
-smart_sudo chmod +x /etc/profile.d/dotnet-core.sh
+' | smart_sudo tee /etc/profile.d/dotnet.sh >/dev/null
+smart_sudo chmod +x /etc/profile.d/dotnet.sh
 
 if [[ -n "$(command -v sudo)" ]] && sudo test -d /home/user; then
     # sudo as user
     sudo -u user mkdir -p /home/user/.dotnet/tools
     if [[ -z "${SKIP_DOTNET_ENVIRONMENT:-}" ]]; then
+      (echo ""; echo ""; cat /etc/profile.d/dotnet.sh) >> /home/user/.bashrc
       printf "\n\n" >> /home/user/.bashrc
-      # sudo as user
-      sudo -u user cat /etc/profile.d/dotnet-core.sh >> /home/user/.bashrc
     fi
     smart_sudo chown -R user /home/user
 fi
@@ -156,7 +155,7 @@ Say "Configured shared environment for .NET Core"
 
       export DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1
       # export DOTNET_SYSTEM_NET_HTTP_USESOCKETSHTTPHANDsmart_LER=0
-      if [[ "${SKIP_DOTNET_DEPENDENCIES:-}" != "True" ]]; then
+      if [[ "${SKIP_DEPENDENCIES:-}" != "True" ]]; then
         arg_update_repo="--update-repo"; [[ "$UPDATE_REPO" == "False" ]] && arg_update_repo=""
         Run-Remote-Script https://devizer.github.io/devops-library/install-dotnet-dependencies.sh $arg_update_repo
       fi
