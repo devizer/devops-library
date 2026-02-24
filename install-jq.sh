@@ -66,8 +66,10 @@ file="$(MkTemp-File-Smarty "$(basename "$url")")"
 echo "Downloading url: '$url' as '$file'"
 Download-File "$url" "$file"
 
+set -x
 $sudo chmod +x "$file"
 target_file="$INSTALL_DIR/jq"; [[ "$(Get-OS-Platform)" == Windows ]] && target_file="$target_file.exe"
+ls -la "$file" || true
 $sudo cp -v "$file" "$target_file"
 printf "Validating jq ... "
 ver=$("$target_file" --version || true)
