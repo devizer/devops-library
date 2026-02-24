@@ -60,13 +60,13 @@ if [[ -z "${INSTALL_DIR:-}" ]]; then
   fi
 fi
 
-Colorize Yellow "Downloading static jq version '$JQ_VERSION' into folder '$INSTALL_DIR'"
+Colorize Yellow "Download static jq version '$JQ_VERSION' into folder '$INSTALL_DIR'"
 file="$(MkTemp-File-Smarty "$(basename "$url")")"
-echo "Download url: '$url' as '$file'"
+echo "Downloading url: '$url' as '$file'"
 Download-File "$url" "$file"
 
-$sudo cp -v "$file" "$INSTALL_DIR"/jq
 $sudo chmod +x "$file"
+$sudo cp -v "$file" "$INSTALL_DIR"/jq
 echo "Validating jq ..."
 ver=$("$INSTALL_DIR"/jq --version || true)
 if [[ -n "$ver" ]]; then Colorize Green "OK: $ver"
