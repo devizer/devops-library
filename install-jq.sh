@@ -70,7 +70,7 @@ $sudo chmod +x "$file"
 target_file="$INSTALL_DIR/jq"; [[ "$(Get-OS-Platform)" == Windows ]] && target_file="$target_file.exe"
 $sudo cp -v "$file" "$target_file"
 printf "Validating jq ... "
-ver=$("target_file" --version || true)
+ver=$("$target_file" --version || true)
 if [[ -n "$ver" ]]; then Colorize Green "OK: $ver"
 else Colorize Red "Fail. jq binary '$INSTALL_DIR/jq' is invalid on the platform"
 fi
