@@ -67,9 +67,10 @@ echo "Downloading url: '$url' as '$file'"
 Download-File "$url" "$file"
 
 $sudo chmod +x "$file"
-$sudo cp -v "$file" "$INSTALL_DIR"/jq
-echo "Validating jq ..."
-ver=$("$INSTALL_DIR"/jq --version || true)
+target_file="$INSTALL_DIR/jq"; [[ "$(Get-OS-Platform)" == Windows ]] && target_file="$target_file.exe"
+$sudo cp -v "$file" "$INSTALL_DIR/jq"
+printf "Validating jq ..."
+ver=$("target_file" --version || true)
 if [[ -n "$ver" ]]; then Colorize Green "OK: $ver"
 else Colorize Red "Fail. jq binary '$INSTALL_DIR/jq'' is invalid"
 fi
