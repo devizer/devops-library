@@ -18,6 +18,7 @@ if [[ "$rid" == "osx"*"arm64" ]]; then suffix="macos-arm64"; fi
 if [[ "$rid" == "win-x64" ]]; then suffix="windows-amd64.exe"; fi
 if [[ "$rid" == "win" ]]; then suffix="windows-i386.exe"; fi
 
+url="https://github.com/jqlang/jq/releases/download/jq-$JQ_VERSION/jq-$suffix"
 
 while [ $# -gt 0 ]; do
   case "$1" in
