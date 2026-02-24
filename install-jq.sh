@@ -13,8 +13,11 @@ if [[ "$rid" == "linux"*"x64" ]]; then suffix="linux-amd64"; fi
 if [[ "$rid" == "linux"*"arm64" ]]; then suffix="linux-arm64"; fi
 if [[ "$rid" == "linux"*"arm" ]]; then suffix="linux-armhf"; fi
 if [[ "$rid" == "linux"*"i386" ]]; then suffix="linux-i386"; fi
-if [[ "$rid" == "linux"*"armel" ]]; then suffix="linux-armel"; fi
-url="https://github.com/jqlang/jq/releases/download/jq-$JQ_VERSION/jq-$suffix"
+if [[ "$rid" == "osx"*"x64" ]]; then suffix="macos-amd64"; fi
+if [[ "$rid" == "osx"*"arm64" ]]; then suffix="macos-arm64"; fi
+if [[ "$rid" == "win-x64" ]]; then suffix="windows-amd64.exe"; fi
+if [[ "$rid" == "win" ]]; then suffix="windows-i386.exe"; fi
+
 
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -40,22 +43,19 @@ while [ $# -gt 0 ]; do
   esac
 done
 
-sudo=$(command -v sudo || true)
-
-if [[ "$(uname -s)" != Linux ]]; then
-  echo "A Linux OS is expected for jq, platform is not supported"
-  exit 0
-fi
+sudo=$(Get-Sudo-Command)
 
 export TMPDIR="${TMPDIR:-/tmp}"
 if [[ -z "${INSTALL_DIR:-}" ]]; then
   $sudo mkdir -p /usr/local/bin;
-  if [[ -d /usr/local/bin ]]; then 
+  if [[ "$(Get-OS-Platofrm)" == Windows && -d "${SYSTEMROOT:-}" ]]; then
+    INSTALL_DIR="$SYSTEMROOT"
+  elif [[ -d /usr/local/bin ]]; then 
      INSTALL_DIR=/usr/local/bin
   elif [[ "$(Is-Termux)" ]]; then
      INSTALL_DIR=$PREFIX/bin
   else
-    echo "Unable to auto-detect target bin folder for jq"
+    echo "Unable to auto-detect target bin folder for jq, please specify --target-folder parameter"
     exit 1
   fi
 fi
