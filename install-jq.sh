@@ -62,14 +62,13 @@ if [[ -z "${INSTALL_DIR:-}" ]]; then
 fi
 
 Colorize Yellow "Download static jq version '$JQ_VERSION' into folder '$INSTALL_DIR'"
-file="$(MkTemp-File-Smarty "$(basename "$url")")"
-echo "Downloading url: '$url' as '$file'"
-Download-File "$url" "$file"
-
-$sudo chmod +x "$file"
+# file="$(MkTemp-File-Smarty "$(basename "$url")")"
 target_file="$INSTALL_DIR/jq"; [[ "$(Get-OS-Platform)" == Windows ]] && target_file="$target_file.exe"
-$sudo mkdir -p "$INSTALL_DIR" || true
-$sudo cp -v "$file" "$target_file"
+echo "Downloading url: '$url' as '$target_file'"
+mkdir -p "$INSTALL_DIR" 2>/dev/null | $sudo mkdir -p "$INSTALL_DIR" || true
+Download-File "$url" "$target_file"
+
+$sudo chmod +x "$target_file"
 printf "Validating jq ... "
 ver=$("$target_file" --version || true)
 if [[ -n "$ver" ]]; then Colorize Green "OK: $ver"
