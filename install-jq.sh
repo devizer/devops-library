@@ -49,7 +49,7 @@ sudo=$(Get-Sudo-Command)
 export TMPDIR="${TMPDIR:-/tmp}"
 if [[ -z "${INSTALL_DIR:-}" ]]; then
   $sudo mkdir -p /usr/local/bin;
-  if [[ "$(Get-OS-Platofrm)" == Windows && -d "${SYSTEMROOT:-}" ]]; then
+  if [[ "$(Get-OS-Platform)" == Windows && -d "${SYSTEMROOT:-}" ]]; then
     INSTALL_DIR="$SYSTEMROOT"
   elif [[ -d /usr/local/bin ]]; then 
      INSTALL_DIR=/usr/local/bin
