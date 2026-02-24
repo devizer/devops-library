@@ -23,16 +23,16 @@ url="https://github.com/jqlang/jq/releases/download/jq-$JQ_VERSION/jq-$suffix"
 while [ $# -gt 0 ]; do
   case "$1" in
     --target-folder)
-      if [ -z "${2:-}" ]; then
-        echo "Error: --target-folder requires a non-empty argument" >&2
+      if [ $# -lt 2 ]; then
+        echo "Error: --target-folder requires an argument (even if empty)" >&2
         exit 1
       fi
       INSTALL_DIR="$2"
       shift 2
       ;;
     --version)
-      if [ -z "${2:-}" ]; then
-        echo "Error: --version requires a non-empty argument" >&2
+      if [ $# -lt 2 ]; then
+        echo "Error: --version requires an argument (even if empty)" >&2
         exit 1
       fi
       JQ_VERSION="$2"
