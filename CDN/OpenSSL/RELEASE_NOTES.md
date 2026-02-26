@@ -1,11 +1,7 @@
 ## OpenSSL 1.1.1 and 3.* binaries intended for glibc and musl Linux.
 
-Minimum glibc version: 2.19
-
-Minimum musl libc version: 1.1.18
-
 The main purposes of the release are:
-1. End-to-end and integration testing of .NET applications
+1. End-to-end and integration testing of .NET applications.
 2. Distribution of a .NET service/application without requiring users to install OpenSSL libraries. 
 
 ### End-To-End testing scenario
@@ -17,9 +13,9 @@ Run-Remote-Script https://devizer.github.io/devops-library/install-libssl.sh \
     [--force]
 ```
 It downloads OpenSSL binaries into the specified folder and registers them with the dynamic linker. 
-Options --first and --last define the position in the dynamic loader configuration.
+Options **--first** and **--last** define the position in the dynamic loader configuration.
 
-By default the command does nothing if OpenSSL libraries are already registered. The --force option overrides this behavior
+By default the command does nothing if OpenSSL libraries are already registered. The **--force** option overrides this behavior
 
 Supported version arguments:
 1.1.1, 3.5 or any X.Y.Z from the assets below. Default is 1.1.1
@@ -28,9 +24,10 @@ Supported version arguments:
 For example, assume you have built portable binaries of your own application into 6 folders: ./superapp-linux-arm, ./superapp-linux-arm64, ./superapp-linux-x64, ./superapp-linux-musl-arm, ./superapp-linux-musl-arm64, ./superapp-linux-musl-x64.
 To distribute it, include OpenSSL 3.5 LTS as part of the application side-by-side:
 ```
-for arch in arm arm64 x64 musl-arm musl-arm64 musl-x64; do
+runtimes="arm arm64 x64 musl-arm musl-arm64 musl-x64"
+for rid in $runtimes; do
   Run-Remote-Script https://devizer.github.io/devops-library/install-libssl.sh \
-      v3.5 --target-folder "./superapp-linux-$arch/libssl-v3.5"
+      v3.5 --target-folder "./superapp-linux-$rid/libssl-v3.5"
 done 
 ```
 
@@ -49,10 +46,21 @@ if [[ -n "$(command -v ldconfig)" ]]; then
   fi
 fi
 if [[ "$libssl_exists" == True ]]; then
-  echo "The system already has libssl.so.3 and libcrypto.so.3, starting superapp using them"
+  echo "The system already has libssl.so.3 and libcrypto.so.3" 
+  echo "Starting superapp using them"
 else
   echo "The system misses libssl.so.3 and libcrypto.so.3, starting superapp using libssl 3.5 from libssl-v3.5 folder"
   export LD_LIBRARY_PATH=/path/to/superapp/libssl-v3.5
 fi
 /path/to/superapp/superapp
 ```
+
+### Build Notes
+
+* Minimum glibc version: 2.19
+* Minimum musl libc version: 1.1.18
+* All OpenSSL binaries are built with runtime CPU feature detection to maximize performance.
+* Minimum x86_64 CPU requirements: An SSE2-capable processor. AVX2 and AES instructions are optional but recommended.
+* Minimum 32-bit ARM CPU requirements: ARMv7. NEON instructions are optional but recommended.
+* ARM64: No specific CPU requirements.
+* Version 3.5 LTS binaries will be rebuilt until EOL on April 8, 2030.
