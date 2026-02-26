@@ -21,7 +21,7 @@ Supported version arguments:
 1.1.1, 3.5 or any X.Y.Z from the assets below. Default is 1.1.1
 
 ### Software distribution scenario:
-For example, assume you have built portable binaries of your own application into 6 folders: ./superapp-linux-arm, ./superapp-linux-arm64, ./superapp-linux-x64, ./superapp-linux-musl-arm, ./superapp-linux-musl-arm64, ./superapp-linux-musl-x64.
+For example, assume you have built self-contained portable binaries of your own application into 6 folders: ./superapp-linux-{arm,arm64,x64,musl-arm,musl-arm64,musl-x64}
 To distribute it, include OpenSSL 3.5 LTS as part of the application side-by-side:
 ```
 runtimes="arm arm64 x64 musl-arm musl-arm64 musl-x64"
@@ -32,7 +32,7 @@ done
 ```
 
 It will create a libssl-v3.5 subfolder for each package and will download the appropriate builds of libcrypto.so.3 and libssl.so.3 into the corresponding folder.
-Later, in your application launcher, you can explicitly enforce the use of these private binaries, even if the system is already configured to use the default OpenSSL 3 binaries.
+Later, in your application launcher, you can explicitly enforce the use of these private binaries, even if the system already has preinstalled OpenSSL 3 binaries.
 ```
 LD_LIBRARY_PATH=/path/to/superapp/libssl-v3.5 ./superapp
 ```
@@ -49,7 +49,8 @@ if [[ "$libssl_exists" == True ]]; then
   echo "The system already has libssl.so.3 and libcrypto.so.3" 
   echo "Starting superapp using them"
 else
-  echo "The system misses libssl.so.3 and libcrypto.so.3, starting superapp using libssl 3.5 from libssl-v3.5 folder"
+  echo "The system misses libssl.so.3 and libcrypto.so.3
+  echo "Starting superapp using libssl 3.5 from libssl-v3.5 folder"
   export LD_LIBRARY_PATH=/path/to/superapp/libssl-v3.5
 fi
 /path/to/superapp/superapp
