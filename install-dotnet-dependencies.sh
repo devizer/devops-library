@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Here is one line installer 
 # url=https://devizer.github.io/devops-library/install-dotnet.sh; (wget -q -nv --no-check-certificate -O - $url 2>/dev/null || curl -ksSL $url) | UPDATE_REPOS=true bash -e && echo "Successfully installed .NET Core Dependencies"
+set +e; set -o pipefial;
 
 sudo="$(command -v sudo || true)"; [[ "$(uname -s)" == "MSYS"* || ""$(uname -s)"" == "MINGW"* ]] && sudo="";
 
@@ -38,12 +39,15 @@ fi
 
 # CentOS 8. Fedora 26 - 31, 
 # Manual Tests: Red Hat 8.2
+# --nogpg was removed by new versions
 if [[ -n "$(command -v dnf || true)" ]]; then
-  $sudo yum install -y -q --nogpg --nogpgcheck --allowerasing lttng-ust libcurl openssl-libs krb5-libs libicu zlib
+  openssl11=$(dnf search openssl11 -y 2>/dev/null | awk -F'.' '{n=$1; gsub(/ /,"", n); if (n ~ /^openssl11$/) { print n} }')
+  openssl=$(dnf search openssl -y 2>/dev/null | awk -F'.' '{n=$1; gsub(/ /,"", n); if (n ~ /^openssl$/) { print n} }')
+  $sudo yum install -y -q --nogpgcheck --allowerasing lttng-ust libcurl openssl-libs krb5-libs libicu zlib $openssl $openssl11
   # .NET 2x needs openssl 1.0.*
   dnf info compat-openssl10 -y >/dev/null 2>&1 && (
     printf "\nInstalling openssl 1.0 compatiblity\n"
-    $sudo dnf install -y -q --nogpg --nogpgcheck compat-openssl10
+    $sudo dnf install -y -q --nogpgcheck compat-openssl10
   )
 # Tested: CentOS/RHEL 6, 7
 elif [[ -n "$(command -v yum || true)" ]]; then
@@ -51,11 +55,12 @@ elif [[ -n "$(command -v yum || true)" ]]; then
   # missing --allowerasing on CentOS 7
   # openssl11 is for RHEL 7 only, for CentOS 7 & RHEL 6 it is missing
   openssl11=$(yum search openssl11 -y 2>/dev/null | awk -F'.' '{n=$1; gsub(/ /,"", n); if (n ~ /^openssl11$/) { print n} }')
-  $sudo yum install -y -q --nogpg --nogpgcheck lttng-ust libcurl $openssl11 openssl-libs krb5-libs libicu zlib
+  openssl=$(yum search openssl -y 2>/dev/null | awk -F'.' '{n=$1; gsub(/ /,"", n); if (n ~ /^openssl$/) { print n} }')
+  $sudo yum install -y -q --nogpgcheck lttng-ust libcurl $openssl11 $openssl openssl-libs krb5-libs libicu zlib
   # .NET 2x needs openssl 1.0.*
   yum info -y compat-openssl10 -y >/dev/null 2>&1 && (
     printf "\nInstalling openssl 1.0 compatiblity\n"
-    $sudo yum install -y -q --nogpg --nogpgcheck compat-openssl10
+    $sudo yum install -y -q --nogpgcheck compat-openssl10
   )
 fi
 
@@ -69,7 +74,8 @@ if [[ -n "$(command -v apt-get)" ]]; then
   # libssl1.1 libssl1.0.0
   libssl11="$(apt-cache search libssl1.1 | safe-grep -E '^libssl1\.1 ' | awk '{print $1}')"
   libssl10="$(apt-cache search libssl1.0.0 | safe-grep -E '^libssl1\.0\.0 ' | awk '{print $1}')"
-  packages="curl libkrb5-3 zlib1g $libicu $libssl10 $libssl11 $libunwind $libuuid $liblttng"
+  libssl3="$(apt-cache search libssl3 | safe-grep -E '^libssl3 ' | awk '{print $1}')"
+  packages="curl libkrb5-3 zlib1g $libicu $libssl10 $libssl11 $libssl3 $libunwind $libuuid $liblttng"
   # Replace newlines by spaces
   packages="$(echo "$packages" | sed ':a;N;$!ba;s/\n/ /g')"
   # Replace double-spaces by spaces
