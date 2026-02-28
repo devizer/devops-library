@@ -1643,8 +1643,8 @@ while [ $# -gt 0 ]; do
   esac
 done
 
-if [[ "$VERSION" == 1* ]]; then VERSION="$VERSION_1"; fi
-if [[ "$VERSION" == 3* || "$VERSION" == "3.5"* ]]; then VERSION="$VERSION_35"; fi
+if [[ "$VERSION" == "1" || "$VERSION" == "1.1" || "$VERSION" == "1.1.1" ]]; then VERSION="$VERSION_1"; fi
+if [[ "$VERSION" == "3" || "$VERSION" == "3.5" ]]; then VERSION="$VERSION_35"; fi
 if [[ -z "$RID" ]]; then RID=$(Get-NET-RID); fi
 
 sudo=$(command -v sudo || true)
