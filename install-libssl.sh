@@ -1660,11 +1660,6 @@ if [[ -z "${INSTALL_DIR:-}" ]]; then
   fi
 fi
 
-if [[ "$(Get-OS-Platform)" != Linux ]]; then
-  echo "A Linux OS is expected, $(Get-OS-Platform) platform does not require openssl library"
-  exit 0
-fi
-
 echo "Installing openssl $VERSION binaries into '$INSTALL_DIR'"
 
 
@@ -1690,6 +1685,12 @@ Install_LibSSL() {
     echo "libssl $VERSION for $RID downloaded into '$INSTALL_DIR'."
   else
     printf "%s" "libssl $VERSION for $RID downloaded into '$INSTALL_DIR' complete. Registering the folder for dynamic loader"; [[ "$FORCE" == False ]] && printf " if requred"; echo "";
+
+    if [[ "$(Get-OS-Platform)" != Linux ]]; then
+      echo "A Linux OS is expected, $(Get-OS-Platform) platform does not require openssl library"
+      exit 0
+    fi
+
 
     local libssl_registered=False
     if [[ -n "$(ldconfig -p | grep "$libcrypto_so_name")" && -n "$(ldconfig -p | grep "$libssl_so_name")" ]]; then
