@@ -1,0 +1,1736 @@
+#!/usr/bin/env bash
+# Here is one line installer 
+# url=https://devizer.github.io/devops-library/install-libssl-1.1.1.sh; (wget -q -nv --no-check-certificate -O - $url 2>/dev/null || curl -ksSL $url) | bash
+# Run-Remote-Script https://devizer.github.io/devops-library/install-libssl-1.1.1.sh --target-folder /opt/libssl-1.1.1 --register --first
+
+# Include Directive: [ ..\Includes\*.sh ]
+# Include File: [\Includes\Clean-Up-My-Temp-Folders-and-Files-on-Exit.sh]
+# https://share.google/aimode/a99XJQA3NtxMUcjWi
+
+Clean-Up-My-Temp-Folders-and-Files-on-Exit() {
+  local template="${1:-clean.up.list.txt}"
+  if [[ -z "${_DEVOPS_LIBRARY_TEMP_FOLDERS_AND_FILES_LIST:-}" ]]; then
+     # secondary call is ignored, but clean up queue is not lost
+    _DEVOPS_LIBRARY_TEMP_FOLDERS_AND_FILES_LIST="$(MkTemp-File-Smarty "$template")"
+    trap clean_up_my_temp_folders_and_files_on_exit_implementation EXIT INT TERM PIPE
+  fi
+}
+
+clean_up_my_temp_folders_and_files_on_exit_implementation() {
+  local last_status=$?
+  trap - EXIT INT TERM PIPE
+
+  set +e; # case of broken pipe
+  local todoFile="${_DEVOPS_LIBRARY_TEMP_FOLDERS_AND_FILES_LIST:-}"
+  _DEVOPS_LIBRARY_TEMP_FOLDERS_AND_FILES_LIST=""
+  # Clean up
+  if [[ -f "$todoFile" ]]; then
+    [[ -n "${DEBUG_CLEAN_UP_MY_TEMP_FOLDERS_AND_FILES_ON_EXIT:-}" ]] && echo "CLENEAN UP using '$todoFile' to-do list"
+    cat "$todoFile" | while IFS= read -r line; do
+      [[ -n "${DEBUG_CLEAN_UP_MY_TEMP_FOLDERS_AND_FILES_ON_EXIT:-}" ]] && echo "DELETING '$line'"
+      if [[ -f "$line" ]]; then rm -f  "$line" 2>/dev/null; fi
+      if [[ -d "$line" ]]; then rm -rf "$line" 2>/dev/null; fi
+    done
+    [[ -n "${DEBUG_CLEAN_UP_MY_TEMP_FOLDERS_AND_FILES_ON_EXIT:-}" ]] && echo "DELETING '$todoFile'"
+    rm -f "$todoFile" 2>/dev/null
+  fi
+
+  exit "$last_status"
+}
+
+# Include File: [\Includes\Colorize.sh]
+# say Green|Yellow|Red Hello World without quotes
+Colorize() { 
+   local str1st="${1:-}"
+   str1st="$(To-Lower-Case "$str1st")"
+   local newLine="\n"
+   if [[ "$str1st" == "--nonewline" ]] || [[ "$str1st" == "-nonewline" ]]; then newLine=""; shift; fi
+   
+   local NC='\033[0m' Color_White='\033[1;37m' Color_Black='\033[1;30m' \
+         Color_Red='\033[1;31m' Color_Green='\033[1;32m' Color_Yellow='\033[1;33m' Color_Blue='\033[1;34m' Color_Magenta='\033[1;35m' Color_Cyan='\033[1;36m' \
+         Color_LightRed='\033[0;31m' Color_LightGreen='\033[0;32m' Color_LightYellow='\033[0;33m' Color_LightBlue='\033[0;34m' Color_LightMagenta='\033[0;35m' Color_LightCyan='\033[0;36m' Color_LightWhite='\033[0;37m' \
+         Color_Purple='\033[0;35m' Color_LightPurple='\033[1;35m'
+   # local var="Color_${1:-}"
+   # local color=""; [[ -n ${!var+x} ]] && color="${!var}"
+   local color="$(eval "printf '%s' \"\$Color_${1:-}\"" 2>/dev/null)"
+   shift || true
+   # if [[ "$(To-Boolean "Env Var DISABLE_COLOR_OUTPUT" "${DISABLE_COLOR_OUTPUT:-}")" == True ]]; then
+   #   printf "$*${newLine}";
+   # else
+   #   printf "${color:-}$*${NC}${newLine}";
+   # fi
+   if [[ "$(To-Boolean "Env Var DISABLE_COLOR_OUTPUT" "${DISABLE_COLOR_OUTPUT:-}")" == True ]]; then
+     printf "%s%b" "$*" "${newLine}"
+   else
+     printf "%b%s%b%b" "${color:-}" "$*" "${NC}" "${newLine}"
+   fi
+
+}
+# say ZZZ the-incorrect-color
+
+# Include File: [\Includes\Compress-Distribution-Folder.sh]
+# 1) 7z v9.20 is not supported for Compress-Distribution-Folder, but it is ok to extract
+# 2) type is 7z|gz|xz|zip
+Compress-Distribution-Folder() {
+  local type="$1"
+  local compression_level="$2"
+  local source_folder="$3"
+  local target_file="$4"
+  local arg_low_priority="$(To-Lower-Case "${5:-}")"
+  local is_low_priority=False; [[ "$arg_low_priority" == "--low"* ]] && is_low_priority=True;
+
+  local plain_size="$(Format-Thousand "$(Get-Folder-Size "$source_folder")") bytes"
+  local nice_title="";
+  local nice=""; [[ "$is_low_priority" == True && "$(command -v nice)" ]] && nice="nice -n 1" && nice_title=" (low priority)"
+
+  if [[ ! -d "$source_folder" ]]; then 
+    Say --Display-As=Error "[Compress-Folder] Abort. Source folder '$source_folder' is missing"
+    return 1;
+  fi
+
+  mkdir -p "$(dirname "$target_file" 2>/dev/null)" 2>/dev/null
+  local target_file_full="$(cd "$(dirname "$target_file")"; pwd -P)/$(basename "$target_file")"
+
+  pushd "$source_folder" >/dev/null
+      # echo "[DEBUG] target_file_full = '$target_file_full'"
+      printf "Packing $source_folder ($plain_size) as ${target_file_full}${nice_title} ... "
+      [[ -f "$target_file_full" ]] && rm -f "$target_file_full" || true
+      local startAt=$(Get-Global-Seconds)
+      if [[ "$type" == "zip" ]]; then
+        $nice 7z a -bso0 -bsp0 -tzip -mx=${compression_level} "$target_file_full" * | { grep "archive\|bytes" || true; }
+      elif [[ "$type" == "7z" ]]; then
+        $nice 7z a -bso0 -bsp0 -t7z -mx=${compression_level} -m0=LZMA -ms=on -mqs=on "$target_file_full" * | { grep "archive\|bytes" || true; }
+      elif [[ "$type" == "gzip" || "$type" == "tgz" || "$type" == "tar.gz" ]]; then
+        if [[ -n "$(command -v pigz)" ]]; then
+          tar cf - . | $nice pigz -p $(nproc) -b 128 -${compression_level} > "$target_file_full"
+        else
+          tar cf - . | $nice gzip -${compression_level} > "$target_file_full"
+        fi
+      elif [[ "$type" == "xz" || "$type" == "txz" || "$type" == "tar.xz" ]]; then
+        tar cf - . | $nice 7z a dummy -txz -mx=${compression_level} -si -so > "$target_file_full"
+      else
+        Say --Display-As=Error "Abort. Unknown archive type '$type' for folder '$source_folder'"
+      fi
+      local seconds=$(( $(Get-Global-Seconds) - startAt ))
+      local seconds_string="$seconds seconds"; [[ "$seconds" == "1" ]] && seconds_string="1 second"
+
+      Colorize LightGreen "$(Format-Thousand "$(Get-File-Size "$target_file_full")") bytes (took $seconds_string)"
+  popd >/dev/null
+}
+
+# Include File: [\Includes\Download-File.sh]
+Download-File() {
+  local url="$1"
+  local file="$2";
+  local progress1="" progress2="" progress3="" 
+  local download_show_progress="$(To-Boolean "Env Var DOWNLOAD_SHOW_PROGRESS" "${DOWNLOAD_SHOW_PROGRESS:-}")"
+  if [[ "${download_show_progress}" != "True" ]] || [[ ! -t 1 ]]; then
+    progress1="-q -nv"       # wget
+    progress2="-s"           # curl
+    progress3="--quiet=true" # aria2c
+  fi
+  rm -f "$file" 2>/dev/null || rm -f "$file" 2>/dev/null || rm -f "$file"
+  mkdir -p "$(dirname "$file" 2>/dev/null)" 2>/dev/null || true
+  local try1=""
+  if [[ "$(command -v aria2c)" != "" ]]; then
+    [[ -n "${try1:-}" ]] && try1="$try1 || "
+    try1="aria2c $progress3 --allow-overwrite=true --check-certificate=false -s 9 -x 9 -k 1M -j 9 -d '$(dirname "$file")' -o '$(basename "$file")' '$url'"
+  fi
+  if [[ "$(command -v curl)" != "" ]]; then
+    [[ -n "${try1:-}" ]] && try1="$try1 || "
+    try1="${try1:-} curl $progress2 -f -kfSL -o '$file' '$url'"
+  fi
+  if [[ "$(command -v wget)" != "" ]]; then
+    [[ -n "${try1:-}" ]] && try1="$try1 || "
+    try1="${try1:-} wget $progress1 --no-check-certificate -O '$file' '$url'"
+  fi
+  if [[ "${try1:-}" == "" ]]; then
+    echo "error: niether curl, wget or aria2c is available" >&2
+    return 42;
+  fi
+  eval $try1 || eval $try1 || eval $try1
+  # eval try-and-retry wget $progress1 --no-check-certificate -O '$file' '$url' || eval try-and-retry curl $progress2 -kSL -o '$file' '$url'
+}
+
+# Include File: [\Includes\Download-File-Failover.sh]
+Download-File-Failover() {
+  local file="$1"
+  shift
+  for url in "$@"; do
+    # DEBUG: echo -e "\nTRY: [$url] for [$file]"
+    local err=0;
+    Download-File "$url" "$file" || err=$?
+    # DEBUG: say Green "Download status for [$url] is [$err]"
+    if [ "$err" -eq 0 ]; then return; fi
+  done
+  return 55;
+}
+
+# Include File: [\Includes\Extract-Archive.sh]
+# archive-file and toFolder support relative paths
+Extract-Archive() {
+  local file="$1"
+  local toFolder="$2"
+  local needResetFolder=""
+  [[ "$(To-Lower-Case "${3:-}")" =~ ^-[-]?reset ]] && needResetFolder=True
+  local fullFilePath="$(cd "$(dirname "$file")" && pwd)/$(basename "$file")"
+  
+  local sudo="sudo"; [[ -z "$(command -v sudo)" || "$(Get-OS-Platform)" == Windows ]] && sudo=""
+  $sudo mkdir -p "$toFolder" 2>/dev/null
+  pushd "$toFolder" >/dev/null
+  if [[ "$needResetFolder" == True ]]; then $sudo rm -f -r "$toFolder"/*; fi
+  local fileLower="$(To-Lower-Case "$file")"
+  local cat="cat"; [[ -n "$(command -v pv)" ]] && [[ "$(Get-OS-Platform)" != Windows ]] && cat="pv"
+  # echo "[DEBUG] cat is '$cat'"
+  local cmdExtract
+  if [[ "$fileLower" == *".tar.gz" || "$fileLower" == *".tgz" ]]; then
+    # Important: On windows we avoid tar archives
+    cmdExtract="gzip -f -d"
+    $cat "$fullFilePath" | eval $cmdExtract | $sudo tar xf - 2>&1 | { grep -v "implausibly old time stamp" || true; } | { grep -v "in the future" || true; }
+  elif [[ "$fileLower" == *".tar.xz" || "$fileLower" == *".txz" ]]; then
+    # Important: On windows we avoid tar archives
+    cmdExtract="xz -f -d"
+    $cat "$fullFilePath" | eval $cmdExtract | $sudo tar xf - 2>&1 | { grep -v "implausibly old time stamp" || true; } | { grep -v "in the future" || true; }
+  elif [[ "$fileLower" == *".zip" ]]; then
+    $sudo unzip -q -o "$fullFilePath"
+  elif [[ "$fileLower" == *".7z" ]]; then
+    # todo: 7z 9.x does not support -bso0 -bsp0
+    $sudo 7z x -y -bso0 -bsp0 "$fullFilePath"
+  else
+    popd >/dev/null
+    echo "Unable to extract '$file' based on its extension"
+    return 1
+  fi
+
+  popd >/dev/null
+}
+
+# Include File: [\Includes\Fetch-Distribution-File.sh]
+Fetch-Distribution-File() {
+  local productId="$1"
+  local fileNameOnly="$2"
+  local fullFileName="$3"
+  local urlHashList="$4"
+  local urlFileList="$5"
+
+  local tempRoot="$(MkTemp-Folder-Smarty "$productId Setup Metadata")"
+  local hashSumsFile="$(MkTemp-File-Smarty "hash-sums.txt" "$tempRoot")"
+
+  local hashAlg="$(EXISTING_HASH_ALGORITHMS="sha512 sha384 sha256 sha224 sha1 md5" Find-Hash-Algorithm)"
+  DEFINITION_COLOR=Default Say-Definition "Hash Algorithm:" "$hashAlg"
+
+  Download-File-Failover "$hashSumsFile" "$urlHashList"
+  Validate-File-Is-Not-Empty "$hashSumsFile" "The hash sum downloaded as %s, the size is" "Error! download of hash sums failed"
+
+  local hashValueFile="$(MkTemp-File-Smarty "$productId $hashAlg hash.txt" "$tempRoot")"
+  cat "$hashSumsFile" | while IFS="|" read -r file alg hashValue; do
+    # echo "$file *** $alg *** $hashValue"
+    if [[ "$file" == "$fileNameOnly" ]] && [[ "$alg" == "$hashAlg" ]]; then printf "$hashValue" > "$hashValueFile"; echo "TEMP HASH VALUE = [$hashValue]" >/dev/null; fi
+  done
+  local targetHash="$(cat "$hashValueFile" 2>/dev/null)"
+  DEFINITION_COLOR=Default Say-Definition "Valid  Hash Value:" "$targetHash"
+
+  # split "$urlFileList" into array
+  local tmp="$(mktemp)"
+  echo "$urlFileList" | awk -F"|" '{for (i=1; i<=NF; i++) print $i}' 2>/dev/null > "$tmp"
+  urls=(); while IFS= read -r line; do [[ -n "$line" ]] && urls+=("$line"); done < "$tmp"
+  rm -f "$tmp" 2>/dev/null || true
+  Download-File-Failover "$fullFileName" "${urls[@]}"
+  Validate-File-Is-Not-Empty "$fullFileName" "The binary archive succesfully downloaded as %s, the size is" "Error! download of binary archive failed"
+
+  local actualHash="$(Get-Hash-Of-File "$hashAlg" "$fullFileName")"
+  DEFINITION_COLOR=Default Say-Definition "Actual Hash Value:" "$targetHash"
+
+  local toDelete
+  for toDelete in "$hashSumsFile" "$hashValueFile"; do
+    rm -f "$toDelete" 2>/dev/null || true
+    # rm -rf "$(dirname "$toDelete")" 2>/dev/null || true
+  done
+  
+  if [[ "$actualHash" == "$targetHash" ]]; then
+    Colorize Green "Hash matches. Download successfully completed"
+  else
+    Colorize Red "Error! Hash does not match. Download failed"
+    return 13
+  fi
+}
+
+# Include File: [\Includes\Find-7z-For-Unpack.sh]
+Print_Standard_Archive_zip() { printf '\x50\x4B\x03\x04\x0A\x00\x00\x00\x00\x00\x6B\x54\x39\x5C\x88\xB0\x24\x32\x02\x00\x00\x00\x02\x00\x00\x00\x06\x00\x00\x00\x61\x63\x74\x75\x61\x6C\x34\x32\x50\x4B\x01\x02\x3F\x00\x0A\x00\x00\x00\x00\x00\x6B\x54\x39\x5C\x88\xB0\x24\x32\x02\x00\x00\x00\x02\x00\x00\x00\x06\x00\x24\x00\x00\x00\x00\x00\x00\x00\x20\x00\x00\x00\x00\x00\x00\x00\x61\x63\x74\x75\x61\x6C\x0A\x00\x20\x00\x00\x00\x00\x00\x01\x00\x18\x00\x80\x2A\xC5\x8A\xD5\x8D\xDC\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x50\x4B\x05\x06\x00\x00\x00\x00\x01\x00\x01\x00\x58\x00\x00\x00\x26\x00\x00\x00\x00\x00'; }
+Print_Standard_Archive_7z() { printf '\x37\x7A\xBC\xAF\x27\x1C\x00\x04\xB3\x31\x1B\x27\x07\x00\x00\x00\x00\x00\x00\x00\x5A\x00\x00\x00\x00\x00\x00\x00\xDB\x6D\x60\xB0\x00\x1A\x0C\x7C\x00\x00\x00\x01\x04\x06\x00\x01\x09\x07\x00\x07\x0B\x01\x00\x01\x23\x03\x01\x01\x05\x5D\x00\x10\x00\x00\x0C\x02\x00\x08\x0A\x01\x88\xB0\x24\x32\x00\x00\x05\x01\x19\x06\x00\x00\x00\x00\x00\x00\x11\x0F\x00\x61\x00\x63\x00\x74\x00\x75\x00\x61\x00\x6C\x00\x00\x00\x19\x04\x00\x00\x00\x00\x14\x0A\x01\x00\x80\x2A\xC5\x8A\xD5\x8D\xDC\x01\x15\x06\x01\x00\x20\x00\x00\x00\x00\x00'; }
+Print_Standard_Archive_gz() { printf '\x1F\x8B\x08\x00\x35\xE5\x75\x69\x04\x00\x01\x02\x00\xFD\xFF\x34\x32\x88\xB0\x24\x32\x02\x00\x00\x00'; }
+Print_Standard_Archive_xz() { printf '\xFD\x37\x7A\x58\x5A\x00\x00\x01\x69\x22\xDE\x36\x02\x00\x21\x01\x00\x00\x00\x00\x37\x27\x97\xD6\x01\x00\x01\x34\x32\x00\x00\x00\x88\xB0\x24\x32\x00\x01\x16\x02\xD0\x61\x10\xD2\x90\x42\x99\x0D\x01\x00\x00\x00\x00\x01\x59\x5A'; }
+
+Find-7z-For-Unpack() {
+  local ext="$(To-Lower-Case "${1:-}")"
+  local tempFolder="$(MkTemp-Folder-Smarty "7z-unpack-probe.$ext")"
+  local tempFile="$tempFolder/actual.$ext"
+  eval Print_Standard_Archive_$ext > "$tempFile" 2>/dev/null
+  local candidates="7z 7zz 7zzs 7za 7zr";
+  local ret="";
+  for candidate in $(echo $candidates); do
+    local err=""
+    $candidate x -y "$tempFile" -o"$tempFolder/output" >/dev/null 2>&1 || err=err
+    if [[ -n "$err" ]]; then continue; fi
+    # local outputFile=$(ls -1 "$tempFolder/output/" 2>/dev/null)
+    local outputFile=actual
+    if [[ -z "$outputFile" ]]; then continue; fi
+    local outputFileFull="$tempFolder/output/$outputFile"
+    if [[ ! -f "$outputFileFull" ]]; then continue; fi
+    local expected42=$(cat "$tempFolder/output/$outputFile")
+    if [[ "$expected42" == "42" ]]; then ret="$candidate"; break; fi
+  done
+  rm -rf "$tempFolder" 2>/dev/null || rm -rf "$tempFolder" 2>/dev/null || true
+  echo "$ret"
+}
+
+# Include File: [\Includes\Find-Decompressor.sh]
+function Find-Decompressor() {
+  local COMPRESSOR_EXT=''
+  local COMPRESSOR_EXTRACT=''
+  local force_fast_compression="$(To-Boolean "Env Var FORCE_FAST_COMPRESSION", "${FORCE_FAST_COMPRESSION:-}")"
+  if [[ "$(Get-OS-Platform)" == Windows ]]; then
+      if [[ "$force_fast_compression" == True ]]; then
+        COMPRESSOR_EXT=zip
+      else
+        COMPRESSOR_EXT=7z
+      fi
+      COMPRESSOR_EXTRACT="{ echo $COMPRESSOR_EXT on Windows does not support pipeline; exit 1; }"
+  else
+     if [[ "$force_fast_compression" == True ]]; then
+       if [[ "$(command -v gzip)" != "" ]]; then
+         COMPRESSOR_EXT=gz
+         COMPRESSOR_EXTRACT="gzip -f -d"
+       elif [[ "$(command -v xz)" != "" ]]; then
+         COMPRESSOR_EXT=xz
+         COMPRESSOR_EXTRACT="xz -f -d"
+       fi
+     else
+       if [[ "$(command -v xz)" != "" ]]; then
+         COMPRESSOR_EXT=xz
+         COMPRESSOR_EXTRACT="xz -f -d"
+       elif [[ "$(command -v gzip)" != "" ]]; then
+         COMPRESSOR_EXT=gz
+         COMPRESSOR_EXTRACT="gzip -f -d"
+       fi
+     fi
+  fi
+  printf "COMPRESSOR_EXT='%s'; COMPRESSOR_EXTRACT='%s';" "$COMPRESSOR_EXT" "$COMPRESSOR_EXTRACT"
+}
+
+# Include File: [\Includes\Find-Hash-Algorithm.sh]
+function Find-Hash-Algorithm() {
+  local alg; local hash
+  local algs="${EXISTING_HASH_ALGORITHMS:-sha512 sha384 sha256 sha224 sha1 md5}"
+  if [[ "$(Get-OS-Platform)" == MacOS ]]; then
+    # local file="$(MkTemp-File-Smarty "hash.probe.txt" "hash.algorithm.validator")"
+    local file="$(MkTemp-Folder-Smarty "osx.hash.algorithm.validator")/hash.probe.txt"
+    printf "%s" "some content" > "$file"
+    # echo "[DEBUG] hash probe fille is '$file'" 1>&2
+    local algs="${EXISTING_HASH_ALGORITHMS:-sha512 sha384 sha256 sha224 sha1 md5}"
+    for alg in $(echo $algs); do
+      hash="$(Get-Hash-Of-File "$alg" "$file")"
+      # echo "[DEBUG] hash for '$alg' is [$hash] probe fille is '$file'" 1>&2
+      if [[ -n "$hash" ]]; then echo "$alg"; break; fi
+    done
+    rm -f "$file"
+    return;
+  fi
+  for alg in $(echo $algs); do
+    if [[ "$(command -v ${alg}sum)" != "" ]]; then
+      echo $alg
+      return;
+    fi
+  done
+}
+
+# returns empty string if $alg is not supported by the os
+function Get-Hash-Of-File() {
+  local alg="${1:-md5}"
+  local file="${2:-}"
+  if [[ "$(Get-OS-Platform)" == MacOS ]]; then
+    local cmd1; local cmd2;
+    [[ "$alg" == sha512 ]] && cmd1="shasum -a 512 -b \"$file\"" && cmd2="openssl dgst -sha512 -r \"$file\""
+    [[ "$alg" == sha384 ]] && cmd1="shasum -a 384 -b \"$file\"" && cmd2="openssl dgst -sha384 -r \"$file\""
+    [[ "$alg" == sha256 ]] && cmd1="shasum -a 256 -b \"$file\"" && cmd2="openssl dgst -sha256 -r \"$file\""
+    [[ "$alg" == sha224 ]] && cmd1="shasum -a 224 -b \"$file\"" && cmd2="openssl dgst -sha224 -r \"$file\""
+    [[ "$alg" == sha1 ]] && cmd1="shasum -a 1 -b \"$file\"" && cmd2="openssl dgst -sha1 -r \"$file\""
+    [[ "$alg" == md5 ]] && cmd1="md5 -r \"$file\"" && cmd2="openssl dgst -md5 -r \"$file\""
+    local ret=""
+    for cmd in "$cmd1" "$cmd2"; do
+      if [[ -n "$cmd" ]]; then
+        ret="$(eval $cmd 2>/dev/null | awk '{print $1}')"
+        if [[ -n "$ret" ]]; then echo "$ret"; return; fi
+      fi
+    done
+    # no sha sum
+  else
+    echo "$("${alg}sum" "$file" 2>/dev/null | awk '{print $1}')"
+  fi
+}
+
+Get-Hash-Of-Folder-Content() {
+  local alg="${1:-md5}"
+  local folder="${2:-}"
+  local sum=$(mktemp)
+  find "$folder" | sort | while IFS= read -r file; do
+    if [[ ! -f "$file" ]]; then continue; fi
+    local file_hash="$(Get-Hash-Of-File "$alg" "$file")"
+    printf "%s" "$file_hash" >> "$sum"
+  done
+  local ret=$(Get-Hash-Of-File "$alg" "$sum")
+  rm -f "$sum" 2>/dev/null || rm -f "$sum" 2>/dev/null || rm -f "$sum"
+  echo $ret
+}
+
+# Include File: [\Includes\Format-Size.sh]
+function Format-Size() {
+  local num="$1"
+  local fractionalDigits="${2:-1}"
+  local measureUnit="${3:-}"
+  # echo "[DEBUG] Format_Size ARGS: num=$num measureUnit=$measureUnit fractionalDigits=$fractionalDigits" >&2
+  awk -v n="$num" -v measureUnit="$measureUnit" -v fractionalDigits="$fractionalDigits" 'BEGIN { 
+    if (n<1999) {
+      y=n; s="";
+    } else if (n<1999999) {
+      y=n/1024.0; s="K";
+    } else if (n<1999999999) {
+      y=n/1024.0/1024.0; s="M";
+    } else if (n<1999999999999) {
+      y=n/1024.0/1024.0/1024.0; s="G";
+    } else if (n<1999999999999999) {
+      y=n/1024.0/1024.0/1024.0/1024.0; s="T";
+    } else {
+      y=n/1024.0/1024.0/1024.0/1024.0/1024.0; s="P";
+    }
+    format="%." fractionalDigits "f";
+    yFormatted=sprintf(format, y);
+    if (length(s)==0) { yFormatted=y; }
+    print yFormatted s measureUnit;
+  }' 2>/dev/null || echo "$num"
+}
+
+# Include File: [\Includes\Format-Thousand.sh]
+Format-Thousand() {
+  local num="$1"
+  # LC_NUMERIC=en_US.UTF-8 printf "%'.0f\n" "$num" # but it is locale dependent
+  # Next is locale independent version for positive integers
+  awk -v n="$num" 'BEGIN { len=length(n); res=""; for (i=0;i<=len;i++) { res=substr(n,len-i+1,1) res; if (i > 0 && i < len && i % 3 == 0) { res = "," res } }; print res }' 2>/dev/null || echo "$num"
+}
+
+Format-Thousand() {
+  local input="$1"
+  [ -z "$input" ] && return
+
+  echo "$input" | awk '{
+    if (match($0, /^-?[0-9]+/)) {
+        pfx = substr($0, RSTART, RLENGTH);
+        rest = substr($0, RSTART + RLENGTH);
+        
+        sign = "";
+        n = pfx;
+        if (substr(pfx, 1, 1) == "-") {
+            sign = "-";
+            n = substr(pfx, 2);
+        }
+
+        len = length(n);
+        res = "";
+        for (i = 1; i <= len; i++) {
+            char = substr(n, len - i + 1, 1);
+            res = char res;
+            if (i % 3 == 0 && i < len) {
+                res = "," res;
+            }
+        }
+        print sign res rest;
+    } else {
+        print $0;
+    }
+  }'
+}
+
+
+Test-New-Format-Thousand() {
+  for sign in "" "-"; do
+    for a in "" 1 12 123 1234 12345 123456 12313123123123123123123123123123123123; do
+      for suffix in "" "." ".1" ".2K"; do
+        val="$sign$a$suffix"
+        # Using printf with brackets to match your required test output style
+        printf "Format_Thousand(%s): [%s]\n" "$val" "$(Format-Thousand "$val")"
+      done
+    done
+  done
+}
+
+# Test-New-Format-Thousand
+
+# Include File: [\Includes\Get-Files-In-Optimal-Order-For-Solid-Archive.sh]
+Get-Files-In-Optimal-Order-For-Solid-Archive() {
+  local folder="$1"
+  local list=$(mktemp)
+  if [[ -z "$list" ]]; then echo "Missing mktemp. Abort" >&2; return 1; fi
+  find "$folder" > "$list"
+
+  touch "$list-folders"
+  touch "$list-files"
+  cat "$list" | while IFS= read -r line; do
+    if [[ -d "$line" ]]; then echo "$line" >> "$list-folders"; else echo "$line" >> "$list-files"; fi
+  done
+  
+  local inline_perl="$list-inline-perl.pl"
+  cat <<'PERL_SORT_FILES' > "${inline_perl}.pl"
+#!/usr/bin/perl
+use strict;
+sub get_file_key {
+    my ($full_path) = @_;
+    my $slash_pos = rindex($full_path, '/');
+    my ($folder, $file_name);
+    if ($slash_pos == -1) {
+        $folder    = "";
+        $file_name = $full_path;
+    } else {
+        $folder    = substr($full_path, 0, $slash_pos);
+        $file_name = substr($full_path, $slash_pos + 1);
+    }
+    my @file_name_parts = split(/\./, $file_name, -1);
+    my $file_name_normalized = join('.', reverse @file_name_parts);
+    return $file_name_normalized . ":" . $folder;
+}
+
+die "Usage: $0 <data_file>\n" unless @ARGV == 1;
+my $data_file = $ARGV[0];
+open(my $fh_data, '<', $data_file) or die "Cannot open $data_file: $!";
+my @data = <$fh_data>;
+close($fh_data);
+my @keys;
+foreach my $f (@data) {
+    my $line = lc($f);
+    my $key=lc($line);
+    $key=get_file_key($key);
+    push(@keys, $key);
+}
+my @sorted_indices = sort { $keys[$a] cmp $keys[$b] } 0 .. $#keys;
+print @data[@sorted_indices];
+PERL_SORT_FILES
+  perl "${inline_perl}.pl" "$list-files" > "$list-sorted-files" || { 
+      echo "Warning! perl is not available. Sorting order is not optimal for solid archive" >&2;
+      cat "$list-files" > "$list-sorted-files";
+  }
+  cat "$list-folders" > "$list-result"
+  cat "$list-sorted-files" >> "$list-result"
+  cat "$list-result"
+  # uncomment before publish
+  rm -f "$list"* 2>/dev/null || rm -f "$list"* 2>/dev/null || rm -f "$list"* 2>/dev/null
+}
+
+# Include File: [\Includes\Get-File-Size.sh]
+# returns size in bytes
+Get-File-Size() {
+    local file="${1:-}"
+    if [[ -n "$file" ]] && [[ -f "$file" ]]; then
+       local sz
+       # Ver 1
+       if [ "$(uname)" = "Darwin" ]; then
+           sz="$(stat -f %z "$file" 2>/dev/null)"
+       else
+           sz="$(stat -c %s "$file" 2>/dev/null)"
+       fi
+
+       # Ver 2
+       if [[ -z "$sz" ]]; then
+         sz=$(NO_COLOR=1 ls -1aln "$file" 2>/dev/null | awk '{print $5}')
+       fi
+       echo "$sz"
+    else
+      if [[ -n "$file" ]]; then
+        echo "Get-File-Size Warning! Missing file '$file'" >&2
+      fi
+    fi
+}
+# Include File: [\Includes\Get-Folder-Size.sh]
+# returns size in bytes
+Get-Folder-Size() {
+    local dir="${1:-}"
+    if [[ -n "$dir" ]] && [[ -d "$dir" ]]; then
+       local sz
+       if [[ "$(uname -s)" == Darwin ]]; then
+         sz="$(unset POSIXLY_CORRECT; $(Get-Sudo-Command) du -k -d 0 "$dir" 2>/dev/null | awk '{print 1024 * $1}' | tail -1 || true)"
+       else
+         sz="$(unset POSIXLY_CORRECT; ($(Get-Sudo-Command) du -k --max-depth=0 "$dir" 2>/dev/null || $(Get-Sudo-Command) du -k -d 0 "$dir" 2>/dev/null || true) | awk '{print 1024 * $1}' || true)"
+       fi
+       echo "$sz"
+    else
+      if [[ -n "$dir" ]]; then
+        echo "Get-Folder-Size Warning! Missing folder '$dir'" >&2
+      fi
+    fi
+}
+# Include File: [\Includes\Get-GitHub-Latest-Release.sh]
+# output the TAG of the latest release of null 
+# does not require jq
+# limited by 60 queries per hour per ip
+function Get-GitHub-Latest-Release() {
+    local owner="$1";
+    local repo="$2";
+    local query="https://api.github.com/repos/$owner/$repo/releases/latest"
+    if [[ "$(To-Lower-Case "${3:-}")" == "--pre"* ]]; then query="https://api.github.com/repos/$owner/$repo/releases"; fi
+    local header_Accept="Accept: application/vnd.github+json"
+    local header_Version="X-GitHub-Api-Version: 2022-11-28"
+    local json=$(wget -q --header="$header_Accept" --header="$header_Version" -nv --no-check-certificate -O - $query 2>/dev/null || curl -ksSL $query -H "$header_Accept" -H "$header_Version")
+    local tag
+    if [[ -n "$(command -v jq)" ]]; then
+      tag=$(echo "$json" | jq -r ".tag_name" 2>/dev/null)
+    fi
+    if [[ -z "${tag:-}" ]]; then
+       # V1: OK
+       # tag=$(echo "$json" | grep -E '"tag_name": "[a-zA-Z0-9_.-]+"' | sed 's/.*"tag_name": "\(.*\)".*/\1/')
+       # V2
+       # json="$(echo $json | tr '\n' ' ' | tr '\r' ' ')"
+       # echo -e "$json\n\n" >&2
+       tag=$(echo "$json" | grep -oE '"tag_name": *"[a-zA-Z0-9_.-]+"' | sed 's/.*"tag_name": *"//;s/"//' | head -1)
+    fi
+    if [[ -n "${tag:-}" && "$tag" != "null" ]]; then 
+        echo "${tag:-}" 
+    fi;
+}
+# echo "Tag devizer/Universe.SqlInsights: [$(get_github_latest_release devizer Universe.SqlInsights)]"
+# echo "Tag devizer/Universe.SqlInsights (beta): [$(get_github_latest_release devizer Universe.SqlInsights --pre)]"
+# echo "Tag powershell/powershell: [$(get_github_latest_release powershell powershell)]"
+# echo "Tag powershell/powershell (beta): [$(get_github_latest_release powershell powershell --pre)]"
+
+
+# Include File: [\Includes\Get-Glibc-Version.sh]
+# returns 21900 for debian 8
+Get-Glibc-Version() {
+  local GLIBC_VERSION=""
+  local GLIBC_VERSION_STRING=""
+  if [[ "$(Get-OS-Platform)" == Linux ]]; then
+      if [[ -z "${GLIBC_VERSION_STRING:-}" ]] && [[ -n "$(command -v getconf)" ]]; then
+        GLIBC_VERSION_STRING="$(getconf GNU_LIBC_VERSION 2>/dev/null | awk '{print $NF}' || true)"
+      fi
+      if [[ -z "${GLIBC_VERSION_STRING:-}" ]] && [[ -n "$(command -v ldd)" ]]; then
+        GLIBC_VERSION_STRING="$(ldd --version 2>/dev/null | awk 'NR==1 {print $NF}' || true)"
+      fi
+      # '{a=$1; gsub("[^0-9]", "", a); b=$2; gsub("[^0-9]", "", b); if ((a ~ /^[0-9]+$/) && (b ~ /^[0-9]+$/)) {print a*10000 + b*100}}'
+      local toNumber='{if ($1 ~ /^[0-9]+$/ && $2 ~ /^[0-9]+$/) { print $1 * 10000 + $2 * 100 }}'
+      GLIBC_VERSION="$(echo "${GLIBC_VERSION_STRING:-}" | awk -F'.' "$toNumber" || true)"
+
+      if [[ -z "${GLIBC_VERSION:-}" ]] && [[ -n "$(command -v gcc)" ]]; then
+        local cfile="$HOME/temp_show_glibc_version"
+        rm -f "$cfile"
+        cat <<-'EOF_SHOW_GLIBC_VERSION' > "$cfile.c"
+#include <gnu/libc-version.h>
+#include <stdio.h>
+int main() { printf("%s\n", gnu_get_libc_version()); }
+EOF_SHOW_GLIBC_VERSION
+        GLIBC_VERSION_STRING="$(gcc $cfile.c -o $cfile 2>/dev/null 1>&2 && $cfile 2>/dev/null || true)"
+        rm -f "$cfile"; rm -f "$cfile.c" 
+        GLIBC_VERSION="$(echo "${GLIBC_VERSION_STRING:-}" | awk -F'.' "$toNumber" || true)"
+      fi
+  fi
+  printf "GLIBC_VERSION='%s'; GLIBC_VERSION_STRING='%s';" "$GLIBC_VERSION" "$GLIBC_VERSION_STRING"
+}
+
+# Include File: [\Includes\Get-Global-Seconds.sh]
+function Get-Global-Seconds() {
+  the_SYSTEM2="${the_SYSTEM2:-$(uname -s)}"
+  if [[ ${the_SYSTEM2} != "Darwin" ]]; then
+      # uptime=$(</proc/uptime);                                # 42645.93 240538.58
+      uptime="$(cat /proc/uptime 2>/dev/null || true)";                 # 42645.93 240538.58
+      if [[ -z "${uptime:-}" ]]; then
+        # secured, use number of seconds since 1970
+        echo "$(date +%s || true)"
+        return
+      fi
+      IFS=' ' read -ra uptime <<< "$uptime";                    # 42645.93 240538.58
+      uptime="${uptime[0]}";                                    # 42645.93
+      uptime=$(LC_ALL=C LC_NUMERIC=C printf "%.0f\n" "$uptime") # 42645
+      echo $uptime
+  else 
+      # https://stackoverflow.com/questions/15329443/proc-uptime-in-mac-os-x
+      boottime=`sysctl -n kern.boottime | awk '{print $4}' | sed 's/,//g'`
+      unixtime=`date +%s`
+      timeAgo=$(($unixtime - $boottime))
+      echo $timeAgo
+  fi
+}
+
+# Include File: [\Includes\Get-Linux-OS-Bits.sh]
+# Works on Linix, Windows, MacOS
+# return 32|64|<empty string>
+Get-Linux-OS-Bits() {
+  # getconf may be absent
+  local ret="$(getconf LONG_BIT 2>/dev/null || true)"
+  if [[ -z "$ret" ]]; then
+     local arch="$(Get-Linux-OS-Architecture)";
+     if [[ "$arch" == "x86_64" || "$arch" == amd64 ]]; then echo "64"; return; fi
+     if [[ "$arch" == arm64 || "$arch" == aarch64 ]]; then echo "64"; return; fi
+     if [[ "$arch" == armhf || "$arch" == armel ]]; then echo "32"; return; fi
+     if [[ "$arch" == i?86 || "$arch" == x86 ]]; then echo "32"; return; fi
+  fi
+  echo $ret;
+}
+
+Get-Linux-OS-Architecture() {
+  local arch="";
+  if [[ -n "$(command -v dpkg)" ]]; then arch="$(dpkg --print-architecture 2>/dev/null || true)"; 
+  elif [[ -n "$(command -v apk)" ]]; then arch="$(apk info --print-arch 2>/dev/null || true)"; 
+  elif [[ -n "$(command -v arch)" ]]; then arch="$(arch 2>/dev/null || true)";
+  elif [[ -n "$(command -v rpm)" ]]; then arch="$(rpm --eval '%{_arch}' 2>/dev/null || true)";
+  fi
+  echo "$arch"
+}
+
+# Include File: [\Includes\Get-NET-RID.sh]
+Get-NET-RID() {
+  local machine="$(uname -m)"; machine="${machine:-unknown}"
+  local rid=unknown
+  if [[ "$(Get-OS-Platform)" == Linux ]]; then
+     local linux_arm linux_arm64 linux_x64
+     if Test-Is-Musl-Linux; then
+         linux_arm="linux-musl-arm"; linux_arm64="linux-musl-arm64"; linux_x64="linux-musl-x64"; 
+     elif Test-Is-Bionic-Linux; then
+         linux_arm="linux-bionic-arm"; linux_arm64="linux-bionic-arm64"; linux_x64="linux-bionic-x64";
+     else
+         linux_arm="linux-arm"; linux_arm64="linux-arm64"; linux_x64="linux-x64"
+     fi
+     if [[ "$machine" == armv7* || "$machine" == armv6* ]]; then
+       rid=$linux_arm;
+     elif [[ "$machine" == aarch64 || "$machine" == armv8* || "$machine" == arm64* ]]; then
+       rid=$linux_arm64;
+       if [[ "$(Get-Linux-OS-Bits)" == "32" ]]; then 
+         rid=$linux_arm; 
+       fi
+     elif [[ "$machine" == x86_64 ]] || [[ "$machine" == amd64 ]] || [[ "$machine" == i?86 ]] || [[ "$machine" == x86 ]]; then
+       rid=$linux_x64;
+       if [[ "$(Get-Linux-OS-Bits)" == "32" ]]; then 
+         rid=linux-i386;
+         echo "Warning! Linux 32-bit i386 is not supported by .NET Core" >&2
+       fi
+     fi;
+     if [ -e /etc/redhat-release ]; then
+       redhatRelease=$(</etc/redhat-release)
+       if [[ $redhatRelease == "CentOS release 6."* || $redhatRelease == "Red Hat Enterprise Linux Server release 6."* ]]; then
+         rid=rhel.6-x64;
+         # echo "Warning! Support for Red Hat 6 in .NET Core ended at the end of 2021" >&2
+       fi
+     fi
+  fi
+  if [[ "$(Get-OS-Platform)" == MacOS ]]; then
+       rid=osx-unknown;
+       local osx_machine="$(sysctl -n hw.machine 2>/dev/null)"
+       if [[ -z "$osx_machine" ]]; then osx_machine="$machine"; fi
+       [[ "$osx_machine" == x86_64 ]] && rid="osx-x64"
+       [[ "$osx_machine" == arm64 ]] && rid="osx-arm64"
+       [[ "$osx_machine" == i?86 || "$osx_machine" == x86 ]] && rid="osx-i386" && echo "Warning! OSX 32-bit i386 is not supported by .NET Core" >&2
+       local osx_version="$(SYSTEM_VERSION_COMPAT=0 sw_vers -productVersion)"
+       [[ "$osx_version" == 10.10.* ]] && rid="osx.10.10-x64"
+       [[ "$osx_version" == 10.11.* ]] && rid="osx.10.11-x64"
+  fi
+  if [[ "$(Get-OS-Platform)" == Windows ]]; then
+       rid="win-unknown"
+       local win_arch="$(Get-Windows-OS-Architecture)"
+       [[ "$win_arch" == x64 ]] && rid="win-x64"
+       [[ "$win_arch" == arm ]] && rid="win-arm"
+       [[ "$win_arch" == arm64 ]] && rid="win-arm64"
+       [[ "$win_arch" == x86 ]] && rid="win-x86"
+       # workaround if powershell.exe is missing
+       [[ "$win_arch" == i?86 ]] && rid="win-x86" 
+       [[ "$win_arch" == x86_64 ]] && rid="win-x64" 
+       [[ "$win_arch" == arm64* || "$win_arch" == aarch64* ]] && rid="win-arm64"
+  fi
+  [[ "$rid" == "linux-bionic-arm" ]] && echo "Warning! Bionic Linux (android) 32-bit arm is not supported by .NET Core. arm64 and x64 android are supported." >&2
+  [[ "$(Is-BusyBox)" == True ]] && [[ ! -f /etc/os-release ]] && echo "Warning! BusyBox outside of a full Linux distro may require manual dependency compilation." >&2
+  echo "$rid"
+}
+
+# x86|x64|arm|arm64|ia64
+Get-Windows-OS-Architecture() {
+    if [[ -n "$(command -v reg)" ]]; then
+      local raw_arch=$(reg query "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Environment" //v PROCESSOR_ARCHITECTURE 2>/dev/null | awk '/PROCESSOR_ARCHITECTURE/ {print $3}')
+      raw_arch="$(To-Lower-Case "$raw_arch")"
+      if [[ "$raw_arch" == "amd64" ]]; then echo "x64"; return; fi
+      if [[ "$raw_arch" == "arm64" ]]; then echo "arm64"; return; fi
+      if [[ "$raw_arch" == "x86" ]]; then echo "x86"; return; fi
+      if [[ "$raw_arch" == "arm" ]]; then echo "arm"; return; fi
+      if [[ "$raw_arch" == "ia64" ]]; then echo "ia64"; return; fi
+    fi
+    if [[ -z "$(command -v powershell)" ]]; then
+      echo "$(uname -m)"
+      return;
+    fi
+    local ps_script=$(cat <<'EOFWINARCH'
+function Has-Cmd {
+  param([string] $arg)
+  if ("$arg" -eq "") { return $false; }
+  [bool] (Get-Command "$arg" -ErrorAction SilentlyContinue)
+}
+
+function Select-WMI-Objects([string] $class) {
+  if     (Has-Cmd "Get-CIMInstance") { $ret = Get-CIMInstance $class; } 
+  elseif (Has-Cmd "Get-WmiObject")   { $ret = Get-WmiObject   $class; } 
+  if (-not $ret) { [Console]::Error.WriteLine("Warning! Missing neither Get-CIMInstance nor Get-WmiObject"); }
+  return $ret;
+}
+
+function Get-CPU-Architecture-Suffix-for-Windows-Implementation() {
+    # on multiple sockets x64
+    $proc = Select-WMI-Objects "Win32_Processor";
+    $a = ($proc | Select -First 1).Architecture
+    if ($a -eq 0)  { return "x86" };
+    if ($a -eq 1)  { return "mips" };
+    if ($a -eq 2)  { return "alpha" };
+    if ($a -eq 3)  { return "powerpc" };
+    if ($a -eq 5)  { return "arm" };
+    if ($a -eq 6)  { return "ia64" };
+    if ($a -eq 9)  { 
+      # Is 32-bit system on 64-bit CPU?
+      # OSArchitecture: "ARM 64-bit Processor", "32-bit", "64-bit"
+      $os = Select-WMI-Objects "Win32_OperatingSystem";
+      $osArchitecture = ($os | Select -First 1).OSArchitecture
+      if ($osArchitecture -like "*32-bit*") { return "x86"; }
+      return "x64" 
+    };
+    if ($a -eq 12) { return "arm64" };
+    return "";
+}
+
+Get-CPU-Architecture-Suffix-for-Windows-Implementation
+EOFWINARCH
+)
+    local win_arch=$(echo "$ps_script" | powershell -c - 2>/dev/null)
+    echo "$win_arch"
+}
+
+# Include File: [\Includes\Get-OS-Platform.sh]
+function Get-OS-Platform() {
+  _LIB_TheSystem="${_LIB_TheSystem:-$(uname -s)}"
+  local ret="Unknown"
+  [[ "$_LIB_TheSystem" == "Linux" ]] && ret="Linux"
+  [[ "$_LIB_TheSystem" == "Darwin" ]] && ret="MacOS"
+  [[ "$_LIB_TheSystem" == "FreeBSD" ]] && ret="FreeBSD"
+  [[ "$_LIB_TheSystem" == "MSYS"* || "$_LIB_TheSystem" == "MINGW"* ]] && ret=Windows
+  echo "$ret"
+}
+
+# Include File: [\Includes\Get-Sudo-Command.sh]
+# 1) Linux, MacOs
+#    return "sudo" if sudo is installed
+# 2) Windows
+#    Uncoditionally empty string
+#    If Run as Administrator then empty string
+#    If sudo is not installed then empty string
+Get-Sudo-Command() {
+  # if sudo is missing then empty string
+  if [[ -z "$(command -v sudo)" ]]; then return; fi
+  # if non-windows and sudo is present then "sudo"
+  if [[ "$(Get-OS-Platform)" != Windows ]]; then echo "sudo"; return; fi
+  # workaround - avoid microsoft sudo
+  return;
+  # the last case: windows and sudo is present
+  if net session >/dev/null 2>&1; then return; fi
+  # is sudo turned on?
+  if sudo config >/dev/null 2>&1; then echo "sudo --inline"; return; fi
+}
+
+# Include File: [\Includes\Get-Tmp-Folder.sh]
+Get-Tmp-Folder() {
+  # pretty perfect on termux and routers
+  local ret="${TMPDIR:-/tmp}" # in windows it is empty, but substitution is correct
+  if [[ -z "${_DEVOPS_LIBRARY_TMP_VALIDATED:-}" ]]; then
+    mkdir -p "$ret" 2>/dev/null
+    _DEVOPS_LIBRARY_TMP_VALIDATED=Done
+  fi
+  echo "$ret"
+}
+# Include File: [\Includes\Is-Bionic-Linux.sh]
+Is-Bionic-Linux() {
+  [[ -z "${_LIB_Is_Bionic_Linux:-}" ]] && _LIB_Is_Bionic_Linux="$(Is-Bionic-Linux-Implementation)"
+  echo "${_LIB_Is_Bionic_Linux}"
+}
+
+Test-Is-Bionic-Linux() {
+  if [[ "$(Is-Bionic-Linux)" == True ]]; then return 0; else return 1; fi
+}
+
+Is-Bionic-Linux-Implementation() {
+  if [[ "$(Get-OS-Platform)" != Linux ]]; then echo False; return; fi
+  # this test is optional, other tests below are self-sufficient
+  # if [[ "$(Is-Termux)" == True ]]; then echo True; return; fi
+  
+  if command -v getconf >/dev/null 2>&1; then
+    if getconf GNU_LIBC_VERSION >/dev/null 2>&1; then
+      echo False; return
+    fi
+  fi
+
+  if [[ -f "/system/bin/linker" ]] || [[ -f "/system/bin/linker64" ]]; then
+    echo True; return
+  fi
+
+  # the slowest check
+  local dependencies=$(ldd "$(command -v bash)" 2>/dev/null);
+  if [[ "$dependencies" == *"libandroid-support.so"* || "$dependencies" == *"ld-android.so"* || "$dependencies" == *"ld-android64.so"* ]]; then
+    echo True; return;
+  fi
+
+  echo False;
+}
+
+# Include File: [\Includes\Is-BusyBox.sh]
+Is-BusyBox() {
+  if [[ "$(Get-OS-Platform)" != Linux ]]; then echo Fasle; return; fi
+  if [[ "$(ls --help 2>&1)" == *"BusyBox "* ]]; then echo True; return; fi
+  echo False
+}
+
+Test-Is-BusyBox() {
+  if [[ "$(Is-BusyBox)" == True ]]; then return 0; else return 1; fi
+}
+
+# Include File: [\Includes\Is-Microsoft-Hosted-Build-Agent.sh]
+#!/usr/bin/env bash
+Is-Microsoft-Hosted-Build-Agent() {
+  if [[ "${TF_BUILD:-}" == True ]]; then
+    if [[ "${AGENT_ISSELFHOSTED:-}" == "0" ]] || [[ "$(To-Lower-Case "${AGENT_ISSELFHOSTED:-}")" == "false" ]] || [[ "${AGENT_NAME:-}" == "Hosted Agent" ]] || [[ "${AGENT_NAME:-}" == "Azure Pipelines" ]] || [[ "${AGENT_NAME:-}" == "Azure Pipelines "* ]] || [[ "${AGENT_NAME:-}" == "ubuntu-latest" ]] || [[ "${AGENT_NAME:-}" == "windows-latest" ]] || [[ "${AGENT_NAME:-}" == "macos-latest" ]]; then
+      echo True
+      return;
+    fi
+  fi
+
+  if [[ "${RUNNER_ENVIRONMENT:-}" == "github-hosted" ]]; then
+      echo True
+      return;
+  fi
+
+  echo False
+}
+
+# Include File: [\Includes\Is-Qemu-Process.sh]
+Is-Qemu-Process() {
+  if grep -q '^x86_Thread_features' /proc/self/status 2>/dev/null; then
+    local arch="$(Get-Linux-OS-Architecture)"
+    if [[ "$arch" == arm* || "$arch" == aarch* ]]; then echo "True"; return; fi
+  fi
+  if grep -q "qemu" /proc/self/maps 2>/dev/null; then echo "True"; return; fi
+  if grep -q "qemu" /proc/self/auxv 2>/dev/null; then echo "True"; return; fi
+  echo "False"
+}
+
+Test-Is-Qemu-Process() {
+  if [[ "$(Is-Qemu-Process)" == True ]]; then return 0; else return 1; fi
+}
+
+# Include File: [\Includes\Is-Qemu-VM.sh]
+# if windows in qemu then it returns False
+function Is-Qemu-VM() {
+  _LIB_Is_Qemu_VM_Cache="${_LIB_Is_Qemu_VM_Cache:-$(Is-Qemu-VM-Implementation)}"
+  echo "$_LIB_Is_Qemu_VM_Cache"
+}
+
+function Test-Is-Qemu-VM() {
+  if [[ "$(Is-Qemu-VM)" == True ]]; then return 0; else return 1; fi
+}
+
+function Is-Qemu-VM-Implementation() {
+  # termux checkup is Not required
+  # if [[ "$(Is_Termux)" == True ]]; then return; fi
+  local sudo;
+  # We ignore sudo on windows
+  if [[ -z "$(command -v sudo)" ]] || [[ "$(Get-OS-Platform)" == Windows ]]; then sudo=""; else sudo="sudo"; fi
+  local qemu_shadow="$($sudo grep -r QEMU /sys/devices 2>/dev/null || true)"
+  # test -d /sys/firmware/qemu_fw_cfg && echo "Ampere on this Oracle Cloud"
+  if [[ "$qemu_shadow" == *"QEMU"* ]]; then
+    echo True
+  else
+    echo False
+  fi
+}
+
+# Include File: [\Includes\Is-Termux.sh]
+function Is-Termux() {
+  if [[ "$(Get-OS-Platform)" != Linux ]]; then echo False; return; fi
+  if [[ -n "${TERMUX_VERSION:-}" ]] && [[ -n "${PREFIX:-}" ]] && [[ -d "${PREFIX}" ]]; then
+    echo True
+  else
+    echo False
+  fi
+}
+
+# Include File: [\Includes\Is-Windows.sh]
+function Is-Windows() {
+  if Test-Is-Windows; then echo "True"; else echo "False"; fi
+}
+
+function Test-Is-Windows() {
+  if [[ "$(Get-OS-Platform)" == "Windows" ]]; then return 0; else return 1; fi
+}
+
+function Is-WSL() {
+  if Test-Is-WSL; then echo "True"; else echo "False"; fi
+}
+
+function Test-Is-WSL() {
+  _LIB_TheKernel="${_LIB_TheKernel:-$(uname -r)}"
+  if [[ "$_LIB_TheKernel" == *"Microsoft" ]]; then return 0; else return 1; fi
+}
+
+function Test-Is-Linux() {
+  if [[ "$(Get-OS-Platform)" == "Linux" ]]; then return 0; else return 1; fi
+}
+
+function Is-Linux() {
+  if Test-Is-Linux; then echo "True"; else echo "False"; fi
+}
+
+function Test-Is-MacOS() {
+  if [[ "$(Get-OS-Platform)" == "MacOS" ]]; then return 0; else return 1; fi
+}
+
+function Is-MacOS() {
+  if Test-Is-MacOS; then echo "True"; else echo "False"; fi
+}
+
+
+# Include File: [\Includes\MkTemp-Smarty.sh]
+function MkTemp-Folder-Smarty() {
+  local template="${1:-tmp}";
+  local optionalPrefix="${2:-}";
+
+  local tmpdirCopy="${TMPDIR:-/tmp}";
+  # trim last /
+  mkdir -p "$tmpdirCopy" >/dev/null 2>&1 || true; pushd "$tmpdirCopy" >/dev/null; tmpdirCopy="$PWD"; popd >/dev/null;
+
+  local defaultBase="${DEFAULT_TMP_DIR:-$tmpdirCopy}";
+  local baseFolder="${defaultBase}";
+  if [[ -n "$optionalPrefix" ]]; then baseFolder="$baseFolder/$optionalPrefix"; fi;
+  mkdir -p "$baseFolder";
+  System_Type="${System_Type:-$(uname -s)}";
+  local ret;
+  if [[ "${System_Type}" == "Darwin" ]]; then
+    ret="$(mktemp -t "$template")";
+    rm -f "$ret" >/dev/null 2>&1 || true;
+    rnd="$RANDOM"; rnd="${rnd:0:1}";
+    # rm -rf may fail
+    ret="$baseFolder/$(basename "$ret")${rnd}"; 
+    mkdir -p "$ret";
+  else
+    # ret="$(mktemp -d --tmpdir="$baseFolder" -t "${template}.XXXXXXXXX")";
+    ret="$(mktemp -t "$template".XXXXXXXXX)";
+    rm -f "$ret" >/dev/null 2>&1 || true;
+    rnd="$RANDOM"; rnd="${rnd:0:1}";
+    # rm -rf may fail
+    ret="$baseFolder/$(basename "$ret")${rnd}"; 
+    mkdir -p "$ret";
+  fi
+  if [[ -n "${_DEVOPS_LIBRARY_TEMP_FOLDERS_AND_FILES_LIST:-}" ]] && [[ -f "${_DEVOPS_LIBRARY_TEMP_FOLDERS_AND_FILES_LIST:-}" ]]; then echo "$ret" >> "${_DEVOPS_LIBRARY_TEMP_FOLDERS_AND_FILES_LIST:-}"; fi
+  echo $ret;
+}; 
+# MkTemp-Folder-Smarty session
+# MkTemp-Folder-Smarty session azure-api
+# sudo mkdir -p /usr/local/tmp3; sudo chown -R "$(whoami)" /usr/local/tmp3
+# DEFAULT_TMP_DIR=/usr/local/tmp3 MkTemp-Folder-Smarty session azure-api
+
+
+# template: without .XXXXXXXX suffix
+# optionalFolder if omited then ${TMPDIR:-/tmp}
+function MkTemp-File-Smarty() {
+  local template="${1:-tmp}";
+  local optionalFolder="${2:-}";
+
+  local tmpdirCopy="${TMPDIR:-/tmp}";
+  # trim last /
+  mkdir -p "$tmpdirCopy" >/dev/null 2>&1 || true; pushd "$tmpdirCopy" >/dev/null; tmpdirCopy="$PWD"; popd >/dev/null;
+
+  local folder;
+  if [[ -z "$optionalFolder" ]]; then folder="$tmpdirCopy"; else if [[ "$optionalFolder" == "/"* ]]; then folder="$optionalFolder"; else folder="$tmpdirCopy/$optionalFolder"; fi; fi
+  mkdir -p "$folder"
+  System_Type="${System_Type:-$(uname -s)}";
+  local ret;
+  if [[ "${System_Type}" == "Darwin" ]]; then
+    ret="$(mktemp -t "$template")";
+    rm -f "$ret" >/dev/null 2>&1 || true;
+    local rnd="$RANDOM"; rnd="${rnd:0:1}";
+    # rm -rf may fail
+    ret="$folder/$(basename "$ret")${rnd}"; 
+    mkdir -p "$(dirname "$ret")"
+    touch "$ret"
+  else
+    ret="$(mktemp --tmpdir="$folder" -t "${template}.XXXXXXXXX")";
+  fi
+  if [[ -n "${_DEVOPS_LIBRARY_TEMP_FOLDERS_AND_FILES_LIST:-}" ]] && [[ -f "${_DEVOPS_LIBRARY_TEMP_FOLDERS_AND_FILES_LIST:-}" ]]; then echo "$ret" >> "${_DEVOPS_LIBRARY_TEMP_FOLDERS_AND_FILES_LIST:-}"; fi
+  echo $ret;
+}; 
+
+
+
+
+# Include File: [\Includes\Repair-Legacy-OS-Sources.sh]
+Get-Linux-OS-ID() {
+  # RHEL: ID="rhel" VERSION_ID="7.5" PRETTY_NAME="Red Hat Enterprise Linux" (without version)
+  test -e /etc/os-release && source /etc/os-release
+  local ret="${ID:-}:${VERSION_ID:-}"
+  ret="${ret//[ ]/}"
+
+  if [ -e /etc/redhat-release ]; then
+    local redhatRelease=$(</etc/redhat-release)
+    if [[ $redhatRelease == "Red Hat Enterprise Linux Server release 6."* ]]; then
+      ret="rhel:6"
+    fi
+    if [[ $redhatRelease == "CentOS release 6."* ]]; then
+      ret="centos:6"
+    fi
+  fi
+  [[ "${ret:-}" == ":" ]] && ret="linux"
+  echo "${ret}"
+}
+
+Repair-Legacy-OS-Sources() {
+  if [[ "$(Get-OS-Platform)" != Linux ]]; then return; fi
+  local os_bits=$(Get-Linux-OS-Bits)
+  dpkg_arch="$(dpkg --print-architecture 2>/dev/null || true)"
+  apk_arch="$(apk info --print-arch 2>/dev/null || true)"
+  Say "Adjust os repo for [$(Get-Linux-OS-ID) $(uname -m) ${os_bits} bit]"
+  local os_ver="$(Get-Linux-OS-ID)"
+  if [[ -d "/etc/apt/apt.conf.d" ]]; then
+echo '
+Acquire::AllowReleaseInfoChange::Suite "true";
+Acquire::Check-Valid-Until "0";
+APT::Get::Assume-Yes "true";
+APT::Get::AllowUnauthenticated "true";
+Acquire::AllowInsecureRepositories "1";
+Acquire::AllowDowngradeToInsecureRepositories "1";
+
+APT::Get::AutomaticRemove "0";
+APT::Get::HideAutoRemove "1";
+
+APT::Periodic::Update-Package-Lists "0";
+APT::Periodic::Unattended-Upgrade "0";
+Acquire::CompressionTypes::Order { "gz"; };
+APT::NeverAutoRemove:: ".*";
+APT::Compressor::gzip::CompressArg:: "-1";
+APT::Compressor::xz::CompressArg:: "-1";
+APT::Compressor::bzip2::CompressArg:: "-1";
+APT::Compressor::lzma::CompressArg:: "-1";
+' > /etc/apt/apt.conf.d/99Z_Custom
+  fi
+
+  if [[ "${os_ver}" == "raspbian:7" ]] || [[ "${os_ver}" == "raspbian:8" ]]; then
+  Say "Applying sources.list patch for legacy raspbian [${os_ver}]"
+  local key=wheezy; if [[ "${os_ver}" == "raspbian:8" ]]; then key=jessie; fi
+echo '
+# deb http://archive.raspberrypi.org/debian/ '$key' main
+deb http://legacy.raspbian.org/raspbian/ '$key' main contrib non-free rpi
+' > /etc/apt/sources.list
+  rm -rf /etc/apt/sources.list.d/*
+  fi
+
+  if [[ "${os_ver}" == "debian:7" ]]; then
+echo '
+deb http://archive.debian.org/debian/ wheezy main non-free contrib
+deb http://archive.debian.org/debian-security wheezy/updates main non-free contrib
+deb http://archive.debian.org/debian wheezy-backports main non-free contrib
+' > /etc/apt/sources.list
+  fi
+
+  if [[ "${os_ver}" == "debian:7" ]] && [[ "${os_bits}" == 32 ]] ; then
+echo '
+deb http://archive.debian.org/debian/ wheezy main non-free contrib
+deb http://archive.debian.org/debian-security wheezy/updates main non-free contrib
+deb http://archive.debian.org/debian wheezy-backports main non-free contrib
+' > /etc/apt/sources.list
+  fi
+
+echo 'JESSIE x86_64:
+# deb http://snapshot.debian.org/archive/debian/20210326T030000Z jessie main
+deb http://deb.debian.org/debian jessie main
+# deb http://snapshot.debian.org/archive/debian-security/20210326T030000Z jessie/updates main
+deb http://security.debian.org/debian-security jessie/updates main
+# deb http://snapshot.debian.org/archive/debian/20210326T030000Z jessie-updates main
+deb http://deb.debian.org/debian jessie-updates main
+'>/dev/null
+
+  if [[ "${os_ver}" == "debian:8" ]] && [[ "${os_bits}" == "64" ]] && [[ "$(uname -m)" != x86_64 ]]; then
+echo '
+# sources.list customized at '"$(date)"'
+deb http://archive.debian.org/debian/ jessie main non-free contrib
+# deb http://archive.debian.org/debian-security jessie/updates main non-free contrib
+deb http://archive.debian.org/debian jessie-backports main non-free contrib
+' > /etc/apt/sources.list
+  fi
+
+  if [[ "${os_ver}" == "debian:8" ]] && [[ "${os_bits}" == "32" ]]; then
+echo '
+# sources.list customized at '"$(date)"'
+deb http://archive.debian.org/debian/ jessie main non-free contrib
+# deb http://security.debian.org/ jessie/updates main contrib non-free
+deb http://archive.debian.org/debian-security jessie/updates main contrib non-free
+deb http://archive.debian.org/debian jessie-backports main non-free contrib
+' > /etc/apt/sources.list
+  fi
+
+  if [[ "${os_ver}" == "debian:8" ]]; then
+echo '
+# sources.list customized at '"$(date)"'
+deb http://archive.debian.org/debian/ jessie main non-free contrib
+deb http://archive.debian.org/debian-security jessie/updates main non-free contrib
+deb http://archive.debian.org/debian jessie-backports main non-free contrib
+
+' > /etc/apt/sources.list
+  fi
+
+  if [[ "${os_ver}" == "debian:8" && "$dpkg_arch" == arm64 ]]; then
+echo '
+# sources.list customized at '"$(date)"'
+deb http://archive.debian.org/debian/ jessie main non-free contrib
+# Below was not moved to archive
+# deb http://archive.debian.org/debian-security jessie/updates main non-free contrib
+# deb http://archive.debian.org/debian jessie-backports main non-free contrib
+' > /etc/apt/sources.list
+  fi
+
+  if [[ "${os_ver}" == "debian:9" ]]; then
+echo '
+# sources.list customized at '"$(date)"'
+deb http://archive.debian.org/debian/ stretch main non-free contrib
+deb http://archive.debian.org/debian-security stretch/updates main non-free contrib
+deb http://archive.debian.org/debian stretch-backports main non-free contrib
+' > /etc/apt/sources.list
+  fi
+
+  if [[ "${os_ver}" == "debian:9" ]] && [[ "$(uname -m)" == aarch64 ]] && [[ "${os_bits}" == 64 ]]; then
+echo '
+# sources.list customized at '"$(date)"'
+deb http://archive.debian.org/debian/ stretch main non-free contrib
+deb http://archive.debian.org/debian-security stretch/updates main non-free contrib
+deb http://archive.debian.org/debian stretch-backports main non-free contrib
+' > /etc/apt/sources.list
+  fi
+
+if [[ "$dpkg_arch" == "armel" ]] && [[ "${os_ver}" == "debian:10" ]]; then 
+echo '
+deb http://snapshot.debian.org/archive/debian/20220801T000000Z buster main
+deb http://snapshot.debian.org/archive/debian-security/20220801T000000Z buster/updates main
+deb http://snapshot.debian.org/archive/debian/20220801T000000Z buster-updates main
+' >/etc/apt/sources.list
+echo "Fixed sources.list on [debian:10 armel]"
+fi
+
+# arm64 same as armel
+if [[ "$dpkg_arch" == "arm64" ]] && [[ "${os_ver}" == "debian:10" ]]; then 
+echo '
+deb http://snapshot.debian.org/archive/debian/20220801T000000Z buster main
+deb http://snapshot.debian.org/archive/debian-security/20220801T000000Z buster/updates main
+deb http://snapshot.debian.org/archive/debian/20220801T000000Z buster-updates main
+' >/etc/apt/sources.list
+echo "Fixed sources.list on [debian:10 arm64]"
+fi
+
+# 2025: debian 10
+if [[ "$dpkg_arch" == "amd64" || "$dpkg_arch" == "i386" || "$dpkg_arch" == "armhf" || "$dpkg_arch" == "arm64" ]] && [[ "${os_ver}" == "debian:10" ]]; then 
+echo "DEBIAN 10 ARCHIVE REPO: Done"
+echo '
+deb http://archive.debian.org/debian/ buster main contrib non-free
+deb http://archive.debian.org/debian-security buster/updates main contrib non-free
+deb http://archive.debian.org/debian/ buster-updates main contrib non-free
+
+#deb-src http://archive.debian.org/debian/ buster main contrib non-free
+#deb-src http://archive.debian.org/debian-security buster/updates main contrib non-free
+#deb-src http://archive.debian.org/debian/ buster-updates main contrib non-free
+' >/etc/apt/sources.list
+fi
+
+# 2025: debian 11 arm64
+if [[ "$dpkg_arch" == "arm64" ]] && [[ "${os_ver}" == "debian:11" ]]; then 
+echo "DEBIAN 11 ARM64 ARCHIVE REPO: Done"
+echo '
+deb http://deb.debian.org/debian bullseye main
+# deb-src http://deb.debian.org/debian bullseye main
+deb http://security.debian.org/debian-security bullseye-security main
+# deb-src http://security.debian.org/debian-security bullseye-security main
+deb http://deb.debian.org/debian bullseye-updates main
+# deb-src http://deb.debian.org/debian bullseye-updates main
+# deb http://deb.debian.org/debian bullseye-backports main: 404 NOT FOUND
+# deb-src http://deb.debian.org/debian bullseye-backports main
+' >/etc/apt/sources.list
+fi
+# 2025: debian 11 armel
+if [[ "$dpkg_arch" == "armel" ]] && [[ "${os_ver}" == "debian:11" ]]; then 
+echo "DEBIAN 11 ARM v5 ARCHIVE REPO: Done"
+echo '
+# deb http://ftp.fi.debian.org/debian/ bullseye main contrib non-free
+deb http://archive.debian.org/debian/ bullseye main contrib non-free
+' >/etc/apt/sources.list
+fi
+
+  if [[ "$(Get-Linux-OS-ID)" == "centos:8" ]]; then
+    Say "Resetting CentOS 8 Repo"
+    sed -i 's/mirrorlist/#mirrorlist/g' /etc/yum.repos.d/CentOS-Linux-*
+    sed -i 's|#baseurl=http://mirror.centos.org|baseurl=http://vault.centos.org|g' /etc/yum.repos.d/CentOS-Linux-*
+  fi
+
+
+  if [[ "$(Get-Linux-OS-ID)" == "centos:6" ]]; then
+  Say "Resetting CentOS 6 Repo"
+cat <<-'CENTOS6_REPO' > /etc/yum.repos.d/CentOS-Base.repo
+[C6.10-base]
+name=CentOS-6.10 - Base
+baseurl=http://vault.centos.org/6.10/os/$basearch/
+gpgcheck=0
+gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-6
+enabled=1
+metadata_expire=never
+
+[C6.10-updates]
+name=CentOS-6.10 - Updates
+baseurl=http://vault.centos.org/6.10/updates/$basearch/
+gpgcheck=0
+gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-6
+enabled=1
+metadata_expire=never
+
+[C6.10-extras]
+name=CentOS-6.10 - Extras
+baseurl=http://vault.centos.org/6.10/extras/$basearch/
+gpgcheck=0
+gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-6
+enabled=1
+metadata_expire=never
+
+[C6.10-contrib]
+name=CentOS-6.10 - Contrib
+baseurl=http://vault.centos.org/6.10/contrib/$basearch/
+gpgcheck=0
+gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-6
+enabled=0
+metadata_expire=never
+
+[C6.10-centosplus]
+name=CentOS-6.10 - CentOSPlus
+baseurl=http://vault.centos.org/6.10/centosplus/$basearch/
+gpgcheck=0
+gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-6
+enabled=0
+metadata_expire=never
+CENTOS6_REPO
+  fi
+
+  if [[ "$(command -v dnf)" != "" ]] || [[ "$(command -v yum)" != "" ]]; then
+    # centos/redhat/fedora
+    if [[ -d /etc/yum.repos.d ]]; then
+      Say "Switch off gpgcheck for /etc/yum.repos.d/*.repo for [$(Get-Linux-OS-ID) $(uname -m)]"
+      sed -i "s/gpgcheck=1/gpgcheck=0/g" /etc/yum.repos.d/*.repo
+    fi
+
+    if [[ -e /etc/dnf/dnf.conf ]]; then
+      Say "Switch off gpgcheck for /etc/dnf/dnf.conf for [$(Get-Linux-OS-ID) $(uname -m)]"
+      sed -i "s/gpgcheck=1/gpgcheck=0/g" /etc/dnf/dnf.conf
+    fi
+  fi
+
+  if [[ "${SKIP_REPO_UPDATE:-}" != true ]]; then
+    if [[ "$(Get-Linux-OS-ID)" == "centos"* ]]; then
+      Say "Update yum cache for [$(Get-Linux-OS-ID) $(uname -m) ${os_bits} bit]"
+      try-and-retry yum makecache -q
+    fi
+
+    if [[ -n "$(command -v apt-get)" ]]; then
+      Say "Update apt cache for [$(Get-Linux-OS-ID) $(uname -m) ${os_bits} bit]"
+      if [[ "${os_ver}" == "debian:8" ]]; then
+        apt-get update -qq || true
+      else
+        try-and-retry apt-get update -qq
+      fi
+    fi
+  fi
+
+  echo '
+  export NCURSES_NO_UTF8_ACS=1 PS1="\[\033[01;35m\]\u@\h\[\033[00m\] \[\033[01;34m\]\w \$\[\033[00m\] "
+' | tee -a ~/.bashrc >/dev/null
+
+}
+
+# Include File: [\Includes\Retry-On-Fail.sh]
+function Echo-Red-Error() { 
+  Colorize Red "\n$*\n"; 
+}
+
+function Retry-On-Fail() { 
+  "$@" && return; 
+  Echo-Red-Error "Retrying 2 of 3 for \"$*\""; 
+  sleep 1; 
+  "$@" && return; 
+  Echo-Red-Error "Retrying last, 3 of 3, for \"$*\""; 
+  sleep 1; 
+  "$@"
+}
+
+# Include File: [\Includes\Say-Definition.sh]
+# Last Parameter is Green, the rest are title
+Say-Definition() {
+  if [[ -z "$*" ]]; then echo ""; return; fi
+  # local args=("$@")
+  # local title="${args[@]:0:$#-1}"
+  # local value="${!#}"
+  local value="${@: -1}"
+  # local title="${@:1:$#-1}"; # bash ok, zsh - all the parameters
+
+  local title=""
+  if [ $# -gt 1 ]; then
+    local count=$(( $# - 1 ))
+    title="${@:1:$count}"
+  fi
+
+  if [[ "$title" != *" " ]] && [[ -n "$title" ]]; then title="$title "; fi
+  local colorTitle="${DEFINITION_COLOR:-Yellow}"
+  local colorValue="${VALUE_COLOR:-Green}"
+  Colorize --NoNewLine "$colorTitle" "${title}"
+  Colorize "$colorValue" "${value}"
+}
+
+# Include File: [\Includes\Test-Has-Command.sh]
+Test-Has-Command() {
+  if command -v "${1:-}" >/dev/null 2>&1; then return 0; else return 1; fi
+}
+
+# Include File: [\Includes\Test-Is-Musl-Linux.sh]
+Test-Is-Musl-Linux() {
+  if [[ "$(Get-OS-Platform)" != Linux ]]; then return 1; fi
+  if [[ "$(Is-Termux)" == True ]]; then
+    return 1;
+  elif Test-Has-Command getconf && getconf GNU_LIBC_VERSION >/dev/null 2>&1; then
+    return 1;
+  elif ldd --version 2>&1 | grep -iq "glibc"; then
+    return 1;
+  elif ldd /bin/ls 2>&1 | grep -q "musl"; then
+    return 0;
+  fi
+  eval "$(Get-Glibc-Version)"
+  if [[ -n "${GLIBC_VERSION:-}" ]]; then return 1; fi
+  if [[ "$(Is-Bionic-Linux)" == True ]]; then return 1; fi
+  return 0;
+}
+
+Is-Musl-Linux() {
+  if Test-Is-Musl-Linux; then echo "True"; else echo "False"; fi
+}
+
+# Include File: [\Includes\To-Boolean.sh]
+# return True|False
+function To-Boolean() {
+  local name="${1:-}"
+  local value="${2:-}"
+  value="$(To-Lower-Case "$value")"
+  if [[ "$value" == true ]] || [[ "$value" == on ]] || [[ "$value" == "1" ]] || [[ "$value" == "enable"* ]]; then echo "True"; return; fi
+  if [[ "$value" == "" ]] || [[ "$value" == false ]] || [[ "$value" == off ]] || [[ "$value" == "0" ]] || [[ "$value" == "disable"* ]]; then echo "False"; return; fi
+  echo "Validation Error! Invalid $name option '$value'. Boolean option accept only True|False|On|Off|Enable(d)|Disable(d)|1|0" >&2
+}
+
+# for x in True False 0 1 Enable Disable "" Enabled Disabled; do echo "[$x] as boolean is [$(To_Boolean "Arg" "$x")]"; done
+
+# Include File: [\Includes\To-Lower-Case.sh]
+function To-Lower-Case() {
+  local a="${1:-}"
+  if [[ "${BASH_VERSION:-}" == [4-9]"."* ]]; then
+    echo "${a,,}"
+  elif [[ -n "$(command -v tr)" ]]; then
+    echo "$a" | tr '[:upper:]' '[:lower:]'
+  elif [[ -n "$(command -v awk)" ]]; then
+    echo "$a" | awk '{print tolower($0)}'
+  else
+    echo "WARNING! Unable to convert a string to lower case. It needs bash 4+, or tr, or awk, on legacy bash" >&2
+    return 13
+  fi
+}
+# x="  Hello  World!  "; echo "[$x] in lower case is [$(To_Lower_Case "$x")]"
+
+# Include File: [\Includes\Validate-File-Is-Not-Empty.sh]
+Validate-File-Is-Not-Empty() {
+  local file="$1"
+  # echo "Validate_File_Is_Not_Empty('$file')"
+  local successMessage="${2:-"File %s exists and isn't empty, size is"}"
+  if [[ -f "$file" ]]; then 
+    local sz="$(ls -l "$file" | awk '{print $5}')"
+    local title="$(printf "$successMessage" "$file" 2>/dev/null)"
+    DEFINITION_COLOR=Default VALUE_COLOR=Green Say-Definition "$title" "$(Format-Thousand "$sz") bytes"
+  else
+    local errorMessage="${3:-"File $file exists and is'n empty"}"
+    Colorize Red "$errorMessage"
+  fi
+}
+
+# Include File: [\Includes\Wait-For-HTTP.sh]
+# Wait-For-HTTP http://localhost:55555 30
+Wait-For-HTTP() {
+  local t=""
+  if [[ "$(To-Lower-Case "${1:-}")" == "--wait"* ]]; then
+    t="${2:-30}"
+    shift; shift;
+  fi
+  local u="$1";
+  if [[ -z "$t" ]] && [[ -n "${2:-}" ]]; then t="$2"; fi
+  t="${t:-30}"
+
+  local infoSeconds=seconds;
+  [[ "$t" == "1" ]] && infoSeconds="second"
+  printf "Waiting for [$u] during $t $infoSeconds ..."
+
+  if [[ -z "$(command -v curl)" ]] && [[ -z "$(command -v wget)" ]]; then
+    Colorize Red "MISSING curl|wget. 'Wait For $u' aborted.";
+    return 1;
+  fi
+
+  local httpConnectTimeout="${HTTP_CONNECT_TIMEOUT:-3}"
+
+  local startAt="$(Get-Global-Seconds)"
+  local now;
+  local errHttp;
+  while [ $t -ge 0 ]; do 
+    t=$((t-1)); 
+    errHttp=0;
+    if [[ -n "$(command -v curl)" ]]; then curl --connect-timeout "$httpConnectTimeout" -skf "$u" >/dev/null 2>&1 || errHttp=$?; else errHttp=13; fi
+    if [ "$errHttp" -ne 0 ]; then
+      errHttp=0;
+      if [[ -n "$(command -v wget)" ]]; then wget -q --no-check-certificate -t 1 -T "$httpConnectTimeout" -O - "$u" >/dev/null 2>&1 || errHttp=$?; else errHttp=13; fi
+    fi
+    if [ "$errHttp" -eq 0 ]; then Colorize Green " OK"; return; fi; 
+    printf ".";
+    sleep 1;
+    now="$(Get-Global-Seconds)"; now="${now:-}";
+    local seconds=$((now-startAt))
+    if [ "$seconds" -lt 0 ]; then break; fi
+  done
+  Colorize Red " FAIL";
+  now="$(Get-Global-Seconds)"; now="${now:-}";
+  local seconds2=$((now-startAt))
+  Colorize Red "The service at '$u' is not responding during $seconds2 seconds"
+  return 1;
+}
+
+# Include Directive: [ src\Run-Remote-Script-Body.sh ]
+# Include File: [\DevOps-Lib.ShellProject\src\Run-Remote-Script-Body.sh]
+Run-Remote-Script() {
+  local arg_runner
+  local arg_url
+  arg_runner=""
+  arg_url=""
+  passthrowArgs=()
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      -h|--help)
+        echo 'Usage: Run-Remote-Script [OPTIONS] <URL>
+
+Arguments:
+  URL                Target URL (required)
+
+Options:
+  -r, --runner STR   Specify the runner string
+  -h, --help         Show this help message and exit
+'
+        return 0;;
+
+      -r|--runner)
+        if [ $# -gt 1 ]; then
+          arg_runner="$2"
+          shift 2
+        else
+          echo "Run-Remote-Script Arguments Error: -r|--runner requires a value" >&2
+          return 1
+        fi
+        ;;
+      *)
+        if [ -z "$arg_url" ]; then
+          arg_url="$1"
+          shift
+        else
+          passthrowArgs+=("$1")
+          shift
+        fi
+        ;;
+    esac
+  done
+
+  if [ -z "$arg_url" ]; then
+    echo "Run-Remote-Script Arguments Error: Missing required argument <URL>" >&2
+    return 1
+  fi
+
+  local additionalError=""
+  local lower="$(To-Lower-Case "$arg_url")"
+  if [[ -z "$arg_runner" ]]; then
+    if [[ "$lower" == *".ps1" ]]; then
+      if [[ "$(command -v pwsh)" ]]; then arg_runner="pwsh"; fi
+      if [[ "$(Get-OS-Platform)" == Windows ]] && [[ -z "$arg_runner" ]]; then arg_runner="powershell -f"; else additionalError=". On $(Get-OS-Platform) it requires pwsh"; fi
+    elif [[ "$lower" == *".sh" ]]; then
+      arg_runner="bash"
+    fi
+  fi
+
+  if [[ -z "$arg_runner" ]]; then
+    echo "Run-Remote-Script Arguments Error: Unable to autodetect runner for script '$arg_url'${additionalError}" >&2
+    return 1
+  fi
+  
+  # ok for non-empty array only
+  printf "Invoking "; Colorize -NoNewLine Magenta "${arg_runner} "; Colorize Green "$arg_url" ${passthrowArgs[@]+"${passthrowArgs[@]}"}
+
+  local folder="$(MkTemp-Folder-Smarty)"
+  local file="$(basename "$arg_url")"
+  if [[ "$file" == "download" ]]; then local x1="$(dirname "$arg_url")"; file="$(basename "$x1")"; fi
+  if [[ -z "$file" ]]; then 
+    file="script"; 
+    if [[ "$arg_runner" == *"pwsh"* || "$arg_runner" == *"powershell"* ]]; then file="script.ps1"; fi
+  fi;
+  local fileFullName="$folder/$file"
+  Download-File-Failover "$fileFullName" "$arg_url" 
+  $arg_runner "$fileFullName" ${passthrowArgs[@]+"${passthrowArgs[@]}"}
+  rm -rf "$folder" 2>/dev/null || true
+  
+  return 0
+}
+
+
+VERSION_1="1.1.1w"
+VERSION_35="3.5.5"
+
+
+INSTALL_DIR=""
+VERSION=""
+NEED_REGISTRATION="False"
+POS=First
+FORCE=False
+RID=""
+
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --target-folder)
+      if [ $# -lt 2 ]; then
+        echo "Error: --target-folder requires a non-empty argument" >&2
+        exit 1
+      fi
+      INSTALL_DIR="$2"
+      shift 2
+      ;;
+    --rid)
+      if [ $# -lt 2 ]; then
+        echo "Error: --rid requires a non-empty argument" >&2
+        exit 1
+      fi
+      RID="$2"
+      shift 2
+      ;;
+    --register)
+      NEED_REGISTRATION="True"
+      shift 1
+      ;;
+    --first)
+      POS="First"
+      shift 1
+      ;;
+    --last)
+      POS="Last"
+      shift 1
+      ;;
+    --force)
+      FORCE="True"
+      shift 1
+      ;;
+    *)
+      VERSION="$1"
+      shift
+      ;;
+  esac
+done
+
+if [[ "$VERSION" == 1* ]]; then VERSION="$VERSION_1"; fi
+if [[ "$VERSION" == 3* || "$VERSION" == "3.5"* ]]; then VERSION="$VERSION_35"; fi
+if [[ -z "$RID" ]]; then RID=$(Get-NET-RID); fi
+
+sudo=$(command -v sudo || true)
+
+export TMPDIR="${TMPDIR:-/tmp}"
+if [[ -z "${INSTALL_DIR:-}" ]]; then
+  if [[ -d /usr/local/lib ]]; then INSTALL_DIR=/usr/local/lib; 
+  elif [[ -d /usr/local/lib64 ]]; then INSTALL_DIR=/usr/local/lib64;
+  else 
+    echo "Warning! Neigher /usr/local/lib nor /usr/local/lib64 exists. Creating /usr/local/lib"
+    INSTALL_DIR=/usr/local/lib
+    $sudo mkdir -p $INSTALL_DIR
+  fi
+fi
+
+if [[ "$(Get-OS-Platform)" != Linux ]]; then
+  echo "A Linux OS is expected, $(Get-OS-Platform) platform does not require openssl library"
+  exit 0
+fi
+
+echo "Installing openssl $VERSION binaries into '$INSTALL_DIR'"
+
+
+Install_LibSSL() {
+
+  local url="https://github.com/devizer/devops-library/releases/download/openssl/OpenSSL-$VERSION-${RID}.runtime.libraries.tar.gz"
+  local file_name="$(basename "$url")"
+  local file="$(MkTemp-File-Smarty "$file")"
+  Download-File "$url" "$file"
+  mkdir -p "$INSTALL_DIR" 2>/dev/null || $sudo mkdir -p "$INSTALL_DIR"
+  pushd "$INSTALL_DIR" >/dev/null
+  tar xzf "$file"
+  popd >/dev/null
+
+  local libcrypto_so_name="libcrypto.so.1.1"
+  local libssl_so_name="libssl.so.1.1"
+  if [[ "$VERSION" == 3* ]]; then
+    libcrypto_so_name="libcrypto.so.3"
+    libssl_so_name="libssl.so.3"
+  fi
+
+  if [[ "$NEED_REGISTRATION" == False ]]; then
+    echo "libssl $VERSION for $RID downloaded into '$INSTALL_DIR'."
+  else
+    printf "%s" "libssl $VERSION for $RID downloaded into '$INSTALL_DIR' complete. Registering the folder for dynamic loader"; [[ "$FORCE" == False ]] && printf " if requred"; echo "";
+
+    local libssl_registered=False
+    if [[ -n "$(ldconfig -p | grep "$libcrypto_so_name")" && -n "$(ldconfig -p | grep "$libssl_so_name")" ]]; then
+      libssl_registered=True
+    fi
+
+    if [[ "$FORCE" == False && "$libssl_registered" == True ]]; then
+      echo "Both $libcrypto_so_name and $libssl_so_name are already registered. Skipping ldconfig configuration because --force omitted";
+      return;
+    fi
+
+    if [[ -z "$(command -v ldconfig)" ]]; then
+      echo "Warning! Missing ldconfig. Skipping registration"
+    else
+       ld_so_conf="/etc/ld.so.conf"
+       local found=False
+       while IFS= read -r line || [[ -n "$line" ]]; do
+           if [[ "$line" == "$INSTALL_DIR" ]]; then
+               found=True
+               break
+           fi
+       done < "$ld_so_conf"
+       
+       if [[ "$found" == True ]]; then
+         echo "Folder '$INSTALL_DIR' already registered by ldconfig"
+       else
+         echo "Registering the '"$INSTALL_DIR"' folder as $POS line by ldconfig using $ld_so_conf"
+         local new_conf_file=$(mktemp)
+         if [[ "$POS" == First ]]; then
+             (printf "$INSTALL_DIR\n"; cat /etc/ld.so.conf) > "$new_conf_file"
+         else
+             (cat /etc/ld.so.conf; printf "\n$INSTALL_DIR\n";) > "$new_conf_file"
+         fi
+         $sudo cp -v "$new_conf_file" /etc/ld.so.conf
+         rm -f "$conf" || true
+       fi
+       $sudo ldconfig || true
+       echo "Final libssl and libcrypto registed so-libraries"
+       ldconfig -p | { grep "libssl.so\|libcrypto.so" || true; } || true
+    fi # ldconfig command exists
+  fi # need registration
+}
+
+Install_LibSSL
