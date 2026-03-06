@@ -3,6 +3,19 @@
 # script=https://devizer.github.io/devops-library/install-nodejs.sh; (wget -q -nv --no-check-certificate -O - $script 2>/dev/null || curl -ksSL $script) | bash -s dotnet node pwsh
 # Run-Remote-Script https://devizer.github.io/devops-library/install-nodejs.sh v16.20.2
 
+NODE_LTS_24=24.13.0
+NODE_LTS_22=22.7.0
+NODE_LTS_20=20.20.0
+NODE_LTS_18=18.20.8
+NODE_LTS_16=16.20.2
+
+echo '
+for v in 24.13.0 22.7.0 20.20.0 18.20.8 16.20.2; do
+  Say "NODE VERSION $v"
+  Run-Remote-Script https://devizer.github.io/devops-library/install-nodejs.sh v$v
+done 
+' >/dev/null
+
 NODE_VER=${NODE_VER:-v16.20.2}
 NODE_VER_JESSIE=${NODE_VER_JESSIE:-v10.21.0}
 SKIP_NPM_UPGRADE="${SKIP_NPM_UPGRADE:True}"
@@ -10,6 +23,12 @@ SKIP_NPM_UPGRADE="${SKIP_NPM_UPGRADE:True}"
 if [[ -n "${1:-}" ]]; then
   NODE_VER="${1:-}"
 fi
+
+if [[ "$NODE_VER" == v16 || "$NODE_VER" == 16 ]]; then NODE_VER=NODE_LTS_16; fi
+if [[ "$NODE_VER" == v18 || "$NODE_VER" == 18 ]]; then NODE_VER=NODE_LTS_18; fi
+if [[ "$NODE_VER" == v20 || "$NODE_VER" == 20 ]]; then NODE_VER=NODE_LTS_20; fi
+if [[ "$NODE_VER" == v22 || "$NODE_VER" == 22 ]]; then NODE_VER=NODE_LTS_22; fi
+if [[ "$NODE_VER" == v24 || "$NODE_VER" == 24 ]]; then NODE_VER=NODE_LTS_24; fi
 
 set -ue
 

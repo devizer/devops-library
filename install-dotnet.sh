@@ -11,6 +11,7 @@
 # export DOTNET_VERSIONS="3.1:aspnetcore 6.0:aspnetcore 8.0:aspnetcore 3.1:windowsdesktop 6.0:windowsdesktop 8.0:windowsdesktop 10.0"
 
 # Run-Remote-Script https://devizer.github.io/devops-library/install-dotnet.sh 6.0:aspnetcore 8.0:aspnetcore 9.0 10.0 --skip-linking --target-folder "/usr/share/dotnet" --skip-dependencies|--update-repo
+# Run-Remote-Script https://devizer.github.io/devops-library/install-dotnet.sh 2.1 2.2 3.0 3.1 5.0 6.0 7.0 8.0 9.0 10.0 --skip-linking --target-folder "/usr/share/dotnet" --update-repo
 
 SKIP_LINKING="False"
 SKIP_DEPENDENCIES="False"
